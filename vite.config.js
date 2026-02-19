@@ -132,7 +132,7 @@ export default defineConfig(({ command }) => {
 		},
 		base: isBuild ? '/' : '/',
 		build: {
-			outDir: "../priv/static/frontend", // emit assets to priv/static/frontend
+			//outDir: "../priv/static/frontend",
 			emptyOutDir: true,
 			// disable source maps & size reports to save memory
 			sourcemap: false,
