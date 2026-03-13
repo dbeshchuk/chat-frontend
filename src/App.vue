@@ -1,9 +1,11 @@
 <template>
-	<Suspense>
-		<PGLiteProvider>
-			<div class="wrapper" v-if="$user.account">
 
+
+	<div class="wrapper" v-if="$user.account">
+		<Suspense>
+			<PGLiteProvider>
 				<Menu class="_menu" :class="{ _opened: $menuOpened }" />
+
 				<div class="_menu_backdrop" :class="{ _opened: $menuOpened && $breakpoint.lt('md') }"
 					@click="$menuOpened = false">
 				</div>
@@ -13,20 +15,21 @@
 						<component :is="Component" :key="route.path" />
 					</router-view>
 				</div>
+			</PGLiteProvider>
+		</Suspense>
+	</div>
 
-			</div>
+	<div v-if="!$user.account" class="_login">
+		<router-view v-slot="{ Component, route }">
+			<component :is="Component" :key="route.path" />
+		</router-view>
+	</div>
 
-			<div v-if="!$user.account" class="_login">
-				<router-view v-slot="{ Component, route }">
-					<component :is="Component" :key="route.path" />
-				</router-view>
-			</div>
+	<Modal ref="$modal" />
 
-			<Modal ref="$modal" />
-			<Swal ref="$swalModal" />
-			<Loader />
-		</PGLiteProvider>
-	</Suspense>
+	<Swal ref="$swalModal" />
+
+	<Loader />
 </template>
 
 <style lang="scss" scoped>
@@ -164,7 +167,8 @@ watch(
 );
 
 onMounted(async () => {
-	console.log('mount start')
+	// console.log('mount start')
+
 	$user.setEncryptionManager($encryptionManager);
 
 	window.addEventListener('online', () => ($user.isOnline = navigator.onLine));

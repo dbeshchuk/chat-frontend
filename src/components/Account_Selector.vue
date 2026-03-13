@@ -9,19 +9,16 @@
 				</div>
 			</div>
 			<div class="_list">
-				<div
-					class="_contact"
-					@click="select(account)"
-					v-for="account in filteredList"
-					:class="{ _selected: account.publicKey === selected?.publicKey, _connected: account.publicKey === $user.account?.publicKey }"
-				>
+				<div class="_contact" @click="select(account)" v-for="account in filteredList"
+					:class="{ _selected: account.publicKey === selected?.publicKey, _connected: account.publicKey === $user.account?.publicKey }">
 					<Account_Item :account="account" />
 				</div>
 			</div>
 		</div>
 
 		<div class="d-flex w-100" v-if="selected">
-			<button type="button" class="btn btn-dark d-flex justify-content-center align-items-center w-100" v-if="selected.publicKey === $user.account?.publicKey" @click="logout()">
+			<button type="button" class="btn btn-dark d-flex justify-content-center align-items-center w-100"
+				v-if="selected.publicKey === $user.account?.publicKey" @click="logout()">
 				<i class="_icon_signout bg-white me-2"></i> Logout
 			</button>
 
@@ -29,17 +26,14 @@
 				<i class="_icon_signin bg-white me-2"></i> Sign in
 			</button-->
 
-			<button
-				type="button"
-				class="btn btn-dark d-flex justify-content-center align-items-center ms-1"
+			<button type="button" class="btn btn-dark d-flex justify-content-center align-items-center ms-1"
 				@click="$mitt.emit('modal::open', { id: 'account_backup' })"
-				v-if="selected.publicKey === $user.account?.publicKey"
-				v-tooltip="'Backup account data'"
-			>
+				v-if="selected.publicKey === $user.account?.publicKey" v-tooltip="'Backup account data'">
 				<i class="_icon_backups bg-white px-2"></i>
 			</button>
 
-			<button type="button" class="btn btn-dark d-flex justify-content-center align-items-center ms-1" @click="deleteAccount()" v-tooltip="'Wipe account data from this device'">
+			<button type="button" class="btn btn-dark d-flex justify-content-center align-items-center ms-1"
+				@click="deleteAccount()" v-tooltip="'Wipe account data from this device'">
 				<i class="_icon_delete bg-white px-2"></i>
 			</button>
 		</div>
@@ -55,10 +49,12 @@
 	display: flex;
 	flex-direction: column;
 	overflow: hidden;
+
 	._list {
 		flex-grow: 1;
 		overflow-y: auto;
 		max-height: 14rem;
+
 		._contact {
 			display: flex;
 			align-items: center;
@@ -67,22 +63,27 @@
 			cursor: pointer;
 			border-radius: $blockRadiusSm;
 			margin-bottom: 0.3rem;
+
 			&:hover {
 				background-color: lighten($black, 90%);
 			}
+
 			&._selected {
 				background-color: lighten($black, 85%);
 			}
+
 			&._connected {
 				border: 1px solid lighten($black, 50%);
 			}
 		}
 	}
 }
+
 ._action_btn {
 	padding: 1.2rem;
 	margin-left: 0.3rem;
 	margin-right: 0.3rem;
+
 	i {
 		height: 1.5rem;
 		width: 1.5rem;
@@ -190,7 +191,7 @@ const signin = async () => {
 			});
 		}
 
-		await $encryptionManager.connectToVault(nextUser.vaultId);
+		await $encryptionManager.connectToChatVault(nextUser.vaultId);
 
 		if (swalInstance) swalInstance.close();
 
@@ -199,7 +200,7 @@ const signin = async () => {
 			return;
 		}
 
-		await $user.fromVaultFormat(await $encryptionManager.getData());
+		await $user.fromVaultFormat(await $encryptionManager.getChatData());
 
 		await $user.openStorage({
 			accountInfo: {

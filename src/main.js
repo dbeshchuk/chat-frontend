@@ -23,7 +23,7 @@ dayjs.extend(relativeTime);
 // libs
 import globalFilters from './libs/filters';
 import * as $enigma from './libs/enigma';
-import { EncryptionManager } from './libs/EncryptionManager';
+import { EncryptionManagerV2 } from './libs/EncryptionManagerV2';
 
 const app = createApp(App);
 
@@ -65,7 +65,7 @@ app.config.globalProperties.$loader = useLoader();
 app.provide('$loader', useLoader());
 
 app.provide('$enigma', $enigma);
-app.provide('$encryptionManager', new EncryptionManager(IS_PRODUCTION));
+app.provide('$encryptionManager', new EncryptionManagerV2(IS_PRODUCTION));
 
 app.config.globalProperties.$swal = $swal;
 app.provide('$swal', $swal);
