@@ -71,6 +71,7 @@ class LocalDB {
       shapeKey: "user_cards_public",
       onError: (error) => {
         console.error("Shape sync error:", error);
+
         setOffline();
       },
     });
@@ -145,6 +146,7 @@ class LocalDB {
     );
 
     this.isLocalStash = true;
+
     await this.sendPendingChanges();
   }
 
@@ -154,6 +156,7 @@ class LocalDB {
     const changes = await this.getPendingChanges();
     if (changes.length === 0) {
       this.isLocalStash = false;
+
       return;
     }
 
@@ -192,7 +195,9 @@ class LocalDB {
 
   async debugLocalState() {
     const users = await this.getUsers();
+
     const pending = await this.getPendingChanges();
+
     console.table({ syncedAndLocalView: users, pendingChanges: pending });
   }
 }

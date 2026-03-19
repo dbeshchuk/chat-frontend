@@ -512,7 +512,6 @@ export class EncryptionManagerV2 extends EventTarget {
   async savePqVaultID(id) {
     await this.#rawStore.set('pq-vault-id', id);
   }
-
   /**
    * Removes the PQ vault ID from raw storage.
    */
@@ -604,7 +603,6 @@ export class EncryptionManagerV2 extends EventTarget {
     let msg = challenge;
 
     if (typeof challenge === 'string') {
-      // base64 від Electric → bytes
       msg = Uint8Array.from(atob(challenge), c => c.charCodeAt(0));
     }
 
