@@ -237,7 +237,9 @@ const mode = ref();
 const isPlatformAuthSupported = ref(false)
 
 onMounted(async () => {
-	console.log('is supported', PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable())
+	// console.log('is supported', PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable())
+
+	console.log('user account', $user.account)
 
 	isPlatformAuthSupported.value = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
 
@@ -280,10 +282,11 @@ const connectVaultLocalApp = async () => {
 	let currentUser = vaults.find((u) => u.current);
 	if (!currentUser) currentUser = vaults[0];
 
-	await $encryptionManager.connectToVault(currentUser.vaultId);
+	await $encryptionManager.connectToChatVault(currentUser.vaultId);
+
 	if (!$encryptionManager.isAuth) return;
 
-	const vault = await $encryptionManager.getData();
+	const vault = await $encryptionManager.getChatData();
 	const privateKeyB64 = $enigma.stringToBase64($enigma.hexToUint8Array(vault.privateKey.slice(2)));
 	const publicKeyB64 = $enigma.stringToBase64($enigma.getPublicKeyFromPrivateKey(vault.privateKey.slice(2)));
 

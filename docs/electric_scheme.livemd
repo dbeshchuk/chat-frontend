@@ -1,0 +1,115 @@
+# Vue Storage Model – High-Level Architecture Overview
+
+All user-related data in the application is handled through a clearly separated, security-focused architecture with three distinct layers.
+
+## 1. Global application user state
+
+**Managed exclusively via Pinia User Store**
+
+This store serves as the single source of truth for the current user. Almost every component in the application reads user information (ID, username, avatar, public key, basic profile fields, authentication status etc.) from this Pinia store.
+
+## 2. Private & sensitive local-only data
+
+**Stored in IndexedDB using the lo-fi library and managed exclusively by EncryptionManager**
+
+This layer is used for data that:
+
+- must never leave the current device in plaintext form
+- should never be sent to the backend
+- requires strong protection at rest
+
+## 3. Public / synchronizable user data
+
+**Stored in a local PGLite PostgreSQL database and synchronized with the backend via Electric SQL**
+
+This layer contains the portion of user profile and related entities that:
+
+- is allowed to be visible to other users
+- needs to be replicated across devices
+- participates in shared application state
+
+## EncryptionManager – security boundary & encrypted storage gateway
+
+EncryptionManager is the **only** component that interacts with the encrypted local storage (lo-fi / IndexedDB).
+
+It maintains **two logically and physically separate stores**:
+
+- **chat-vault**  
+  Stores public-facing user data: profile fields that are shared with others, public keys, etc.  
+  Data in this vault can be decrypted into memory when required by the application logic.
+
+- **signing-vault**  
+  Stores post-quantum private keys and any material needed for cryptographic signing.  
+  Decrypted private keys exist in memory **only for the exact duration of a signing operation** and are **never exposed** outside the internal signing method.
+
+**Important rule**: No part of the application except the internal signing logic inside EncryptionManager can ever access private keys.
+
+## LocalDB ElectricProvider – local database & sync coordinator
+
+This component acts as a facade / bridge and is responsible for:
+
+- initializing and managing the **PGLite** instance
+- applying database schema and performing migrations
+- providing reactive / live queries to the rest of the application
+- preparing data insert / update operations
+- requesting cryptographic signatures for every mutation that will be sent to the backend
+- executing changes locally in PGLite
+- coordinating synchronization with the backend via the Electric SQL protocol
+
+## Typical write / mutation flow (simplified)
+
+1. A component wants to create or modify shared data (send message, update profile field visible to others, change room membership etc.)
+2. The component calls the appropriate method on **ElectricProvider**
+3. ElectricProvider constructs the database operation (insert / update row)
+4. ElectricProvider requests **EncryptionManager** to sign this operation
+5. EncryptionManager temporarily decrypts the necessary private key inside signing-vault, creates the signature, and immediately clears the key from memory
+6. The signed operation is written to the local PGLite database
+7. Electric SQL client automatically pushes the change to the backend (when connectivity is available)
+8. The backend verifies the cryptographic signature and either accepts or rejects the mutation
+
+## Core security & architectural guarantees
+
+- Private keys **never** exist in decrypted form outside of the brief moment of signing
+- No component can bypass EncryptionManager to create a signed operation
+- The **Pinia User Store never** contains or has access to private keys
+- Every mutation that affects shared / public state is cryptographically signed using a post-quantum signature scheme
+- Public user profile data is readable after successful authentication but remains encrypted at rest
+- Truly private local data (inside chat-vault) is only accessible during an authenticated session on this specific device
+
+## Summary – clear separation of concerns
+
+| Layer                    | Storage               | Visibility            | Sync status           | Access control                          |
+| ------------------------ | --------------------- | --------------------- | --------------------- | --------------------------------------- |
+| Global user state        | Pinia                 | Whole application     | No sync               | Read-mostly, no secrets                 |
+| Private local data       | lo-fi (chat-vault)    | Only this device      | Never synced          | Encrypted at rest, authenticated access |
+| Private signing material | lo-fi (signing-vault) | Only this device      | Never synced          | Extremely restricted, memory-only       |
+| Public / shared data     | PGLite + Electric SQL | Other users & devices | Actively synchronized | Signed mutations only                   |
+
+This structure provides strong isolation between:
+
+- what the UI needs every second (Pinia)
+- what must remain permanently local and encrypted (EncryptionManager + lo-fi)
+- what must be securely shared and synchronized across devices (Electric SQL + PGLite)
+
+```mermaid
+flowchart TB
+    B{"Vue User Model"} --> D["LocalDB Electric Provider"]
+    D <--> n1["Electric SQL Scheme"]
+    n1 <--> n2["PGLite Local DB"]
+    C["EncryptionManager"] --> B
+    C -.-> n5["Users Data for ElectricSync"]
+    C <-.-> n3["Secret Keys + Local Sign"] & n4["Users Data + Public Keys"]
+    n5 -.-> D
+    D -.-> n7["Insert Methods"]
+    n7 -.-> C
+
+    n1@{ shape: rect}
+    n5@{ shape: rect}
+    n3@{ shape: rect}
+    n4@{ shape: rect}
+    n7@{ shape: rect}
+    style n5 stroke-width:1px,stroke-dasharray: 1
+    style n3 stroke-width:1px,stroke-dasharray: 1
+    style n4 stroke-width:1px,stroke-dasharray: 1
+    style n7 stroke-width:1px,stroke-dasharray: 1
+```
