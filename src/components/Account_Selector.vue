@@ -117,13 +117,13 @@ h6 {
 
 <script setup>
 import { computed, inject, ref, onMounted, nextTick } from 'vue';
-import Account_Item from '@/components/Account_Item.vue';
+// import Account_Item from '@/components/Account_Item.vue';
 import Account_Item_PQ from '@/components/Account_Item_PQ.vue';
 
 const $mitt = inject('$mitt');
 const $loader = inject('$loader');
 const $web3 = inject('$web3');
-const $user = inject('$user');
+// const $user = inject('$user');
 const $userPQ = inject('$userPQ');
 
 const $swal = inject('$swal');
@@ -131,13 +131,15 @@ const $router = inject('$router');
 const $route = inject('$route');
 const $swalModal = inject('$swalModal');
 const $isProd = inject('$isProd');
-const $encryptionManager = inject('$encryptionManager');
+// const $encryptionManager = inject('$encryptionManager');
 const $encryptionManagerPQ = inject('$encryptionManagerPQ');
 const selected = ref();
 const search = ref();
 
 onMounted(async () => {
-	$user.vaults = await $encryptionManager.getVaults();
+	console.log('account selector mounted')
+
+	// $user.vaults = await $encryptionManager.getVaults();
 
 	$userPQ.pqUserCards = await $encryptionManagerPQ.getLocalUserCards();
 
@@ -145,19 +147,19 @@ onMounted(async () => {
 
 	console.log('pq user vaults', $userPQ.pqUserCards)
 
-	if (!$user.account && $user.vaults.length) {
-		let currentUser = $user.vaults.find((u) => u.current);
-		if (currentUser) {
-			select(currentUser);
-		}
-	}
+	// if (!$user.account && $user.vaults.length) {
+	// 	let currentUser = $user.vaults.find((u) => u.current);
+	// 	if (currentUser) {
+	// 		select(currentUser);
+	// 	}
+	// }
 });
 
-const select = (account) => {
-	reset();
-	selected.value = account;
-	signin();
-};
+// const select = (account) => {
+// 	reset();
+// 	selected.value = account;
+// 	signin();
+// };
 
 const selectPQ = (account) => {
 	reset();
@@ -169,113 +171,112 @@ const reset = () => {
 	selected.value = null;
 };
 
-const filteredList = computed(() => {
-	function highlightText(text, searchTerm) {
-		if (!searchTerm || !text) return text;
-		const regex = new RegExp(`(${searchTerm})`, 'gi');
-		return text.replace(regex, `<span class="_highlight_search_text">$1</span>`); // Wrap matched text with <mark>
-	}
+// const filteredList = computed(() => {
+// 	function highlightText(text, searchTerm) {
+// 		if (!searchTerm || !text) return text;
+// 		const regex = new RegExp(`(${searchTerm})`, 'gi');
+// 		return text.replace(regex, `<span class="_highlight_search_text">$1</span>`); // Wrap matched text with <mark>
+// 	}
 
-	let list, searchTerm;
-	if (!search.value) {
-		list = $user.vaults;
-	} else {
-		searchTerm = search.value.toLowerCase();
-		list = $user.vaults.filter((c) =>
-			[c.name, c.notes].some(
-				(
-					value, //, c.address
-				) => value && value.toLowerCase().includes(searchTerm),
-			),
-		);
-	}
+// 	let list, searchTerm;
+// 	if (!search.value) {
+// 		list = $user.vaults;
+// 	} else {
+// 		searchTerm = search.value.toLowerCase();
+// 		list = $user.vaults.filter((c) =>
+// 			[c.name, c.notes].some(
+// 				(
+// 					value, //, c.address
+// 				) => value && value.toLowerCase().includes(searchTerm),
+// 			),
+// 		);
+// 	}
 
-	if ($user.account?.address) {
-		list = list.slice().sort((a, b) => {
-			if (a.address === $user.account.address) return -1;
-			if (b.address === $user.account.address) return 1;
-			return 0;
-		});
-	}
+// 	if ($user.account?.address) {
+// 		list = list.slice().sort((a, b) => {
+// 			if (a.address === $user.account.address) return -1;
+// 			if (b.address === $user.account.address) return 1;
+// 			return 0;
+// 		});
+// 	}
 
-	return list.map((c) => ({
-		...c,
-		highlightedName: highlightText(c.name, searchTerm),
-		highlightedAddress: highlightText(c.address, searchTerm),
-		highlightedNotes: highlightText(c.notes, searchTerm),
-	}));
-});
+// 	return list.map((c) => ({
+// 		...c,
+// 		highlightedName: highlightText(c.name, searchTerm),
+// 		highlightedAddress: highlightText(c.address, searchTerm),
+// 		highlightedNotes: highlightText(c.notes, searchTerm),
+// 	}));
+// });
 
-const signin = async () => {
-	$loader.show();
+// const signin = async () => {
+// 	$loader.show();
 
-	let swalInstance;
-	try {
-		const nextUser = JSON.parse(JSON.stringify(selected.value));
-		await $user.logout();
+// 	let swalInstance;
+// 	try {
+// 		const nextUser = JSON.parse(JSON.stringify(selected.value));
+// 		await $user.logout();
 
-		reset();
+// 		reset();
 
-		if ($route.name !== 'login') {
-			$router.push({ name: 'login' });
-			$mitt.emit('modal::close');
-		}
+// 		if ($route.name !== 'login') {
+// 			$router.push({ name: 'login' });
+// 			$mitt.emit('modal::close');
+// 		}
 
-		if ($isProd) {
-			swalInstance = $swal.fire({
-				icon: 'info',
-				title: 'Authenticate with PassKey',
-				footer: 'Please confirn PassKey on your device when it prompts',
-				timer: 3000,
-			});
-		}
+// 		if ($isProd) {
+// 			swalInstance = $swal.fire({
+// 				icon: 'info',
+// 				title: 'Authenticate with PassKey',
+// 				footer: 'Please confirn PassKey on your device when it prompts',
+// 				timer: 3000,
+// 			});
+// 		}
 
-		await $encryptionManager.connectToVault(nextUser.vaultId);
+// 		await $encryptionManager.connectToVault(nextUser.vaultId);
 
-		if (swalInstance) swalInstance.close();
+// 		if (swalInstance) swalInstance.close();
 
-		if (!$encryptionManager.isAuth) {
-			$loader.hide();
-			return;
-		}
+// 		if (!$encryptionManager.isAuth) {
+// 			$loader.hide();
+// 			return;
+// 		}
 
-		await $user.fromVaultFormat(await $encryptionManager.getData());
+// 		await $user.fromVaultFormat(await $encryptionManager.getData());
 
-		await $user.openStorage({
-			accountInfo: {
-				name: nextUser.name,
-				notes: nextUser.notes,
-				avatar: nextUser.avatar,
-			},
-		});
+// 		await $user.openStorage({
+// 			accountInfo: {
+// 				name: nextUser.name,
+// 				notes: nextUser.notes,
+// 				avatar: nextUser.avatar,
+// 			},
+// 		});
 
-		await $user.checkMetaWallet();
+// 		await $user.checkMetaWallet();
 
-		nextTick(() => {
-			try {
-				$router.replace({ name: 'account_info' });
-			} catch (error) {
-				console.log('signin', error);
-			}
-		});
+// 		nextTick(() => {
+// 			try {
+// 				$router.replace({ name: 'account_info' });
+// 			} catch (error) {
+// 				console.log('signin', error);
+// 			}
+// 		});
 
-		$mitt.emit('modal::close');
-	} catch (error) {
-		console.error('signin', error);
-	}
-	$loader.hide();
-};
+// 		$mitt.emit('modal::close');
+// 	} catch (error) {
+// 		console.error('signin', error);
+// 	}
+// 	$loader.hide();
+// };
 
 const signinPQ = async () => {
-	$loader.show();
+	// $loader.show();
 
 	let swalInstance;
 
 	try {
 		const nextUser = JSON.parse(JSON.stringify(selected.value));
-		await $user.logout();
 
-		console.log('next user', nextUser)
+		await $userPQ.logout();
 
 		reset();
 
@@ -297,10 +298,10 @@ const signinPQ = async () => {
 
 		if (swalInstance) swalInstance.close();
 
-		if (!$encryptionManagerPQ.isAuth) {
-			$loader.hide();
-			return;
-		}
+		// if (!$encryptionManagerPQ.isAuth) {
+		// $loader.hide();
+		// return;
+		// }
 
 		// await $user.fromVaultFormat(await $encryptionManager.getData());
 
@@ -326,7 +327,10 @@ const signinPQ = async () => {
 	} catch (error) {
 		console.error('signin', error);
 	}
-	$loader.hide();
+
+	console.log('is loader next')
+
+	// $loader.hide();
 };
 
 const deleteAccount = async () => {

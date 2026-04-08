@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed, watch } from 'vue';
 import { EncryptionManagerPQ } from '@/libs/EncryptionManagerPQ';
-import { localDB } from '@/utils/db/localDBv2';
+import { localDB } from '@/utils/db/localDBv3';
 
 export const userPQStore = defineStore('userPQ', () => {
   const em = ref(null);
@@ -14,6 +14,7 @@ export const userPQStore = defineStore('userPQ', () => {
   const allNetworkUsers = ref([]);
 
   const isAuthenticated = computed(() => em.value?.isAuth ?? false);
+
   const currentUserHash = computed(() => em.value?.currentUserHash ?? null);
 
   const currentUserFull = computed(() => {

@@ -135,10 +135,10 @@ const $breakpoint = inject('$breakpoint');
 const $encryptionManager = inject('$encryptionManager');
 const $encryptionManagerPQ = inject('$encryptionManagerPQ');
 
-const $web3 = inject('$web3');
-const $swal = inject('$swal');
-const $loader = inject('$loader');
-const $isProd = inject('$isProd');
+// const $web3 = inject('$web3');
+// const $swal = inject('$swal');
+// const $loader = inject('$loader');
+// const $isProd = inject('$isProd');
 
 const $appstate = ref({});
 provide('$appstate', $appstate);
@@ -180,10 +180,10 @@ onMounted(async () => {
 		setTimeout(tick, 1000);
 	}, 1000);
 
-	$user.vaults = await $encryptionManager.getVaults();
+	// $user.vaults = await $encryptionManager.getVaults();
 
-	const pqCards = await $encryptionManagerPQ.getLocalUserCards();
+	$userPQ.pqUserCards = await $encryptionManagerPQ.getLocalUserCards();
 
-	console.log('local cards', pqCards)
+	console.log('local cards', $userPQ.pqUserCards)
 });
 </script>

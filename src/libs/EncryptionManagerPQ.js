@@ -5,6 +5,7 @@ import { ml_dsa87 } from '@noble/post-quantum/ml-dsa.js';
 import { sha3_512 } from '@noble/hashes/sha3';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
 import { randomBytes } from '@noble/post-quantum/utils.js';
+import { localDB } from '../utils/db/localDBv3';
 
 const VAULT_KEY_OPTIONS = {
   authenticatorSelection: {
@@ -81,7 +82,7 @@ export class EncryptionManagerPQ extends EventTarget {
     const userVault = await connect({
       storageType: 'idb',
       addNewVault: true,
-      keyOptions: VAULT_KEY_OPTIONS
+      keyOptions: { ...VAULT_KEY_OPTIONS, username: name, displayName: name }
     });
 
     const seed = randomBytes(32);
@@ -109,6 +110,16 @@ export class EncryptionManagerPQ extends EventTarget {
     this.#localUserCards.push(identity);
 
     await this.#saveLocalUserCards();
+
+    // await localDB.upsertUserLocal({
+    //   user_hash: userHash,
+    //   name,
+    //   sign_pkey: bytesToHex(publicKey),
+    //   crypt_pkey: null,
+    //   crypt_cert: null,
+    //   contact_pkey: null,
+    //   contact_cert: null
+    // });
 
     await this.login(userHash);
 

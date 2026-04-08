@@ -10,7 +10,8 @@
 				<a href="#" class="btn btn-dark rounded-pill p-2" @click.prevent="$refs.avatarImageInput.click()">
 					<i class="bg-white" :class="[account.avatar || account.avatar?.dataUrl ? '_icon_edit' : '_icon_plus']"></i>
 				</a>
-				<input class="_hidden" ref="avatarImageInput" type="file" :accept="ALLOWED_IMAGE_TYPES.join(',')" @change="handleImage($event)" />
+				<input class="_hidden" ref="avatarImageInput" type="file" :accept="ALLOWED_IMAGE_TYPES.join(',')"
+					@change="handleImage($event)" />
 			</div>
 		</div>
 
@@ -20,26 +21,10 @@
 					Name
 					<span class="small ms-1 opacity-50" v-if="!account.name">({{ maxNameLength }} characters max)</span>
 				</label>
-				<input
-					class="form-control"
-					id="name"
-					placeholder="any name you want (visible only to you)"
-					type="text"
-					rows="1"
-					v-model="account.name"
-					:class="{ 'fw-bold': account.name }"
-					v-if="!self"
-				/>
-				<input
-					class="form-control"
-					id="name"
-					placeholder="any name you want (visible only to you)"
-					type="text"
-					rows="1"
-					v-model="$user.accountInfo.name"
-					:class="{ 'fw-bold': $user.accountInfo.name }"
-					v-else
-				/>
+				<input class="form-control" id="name" placeholder="any name you want (visible only to you)" type="text" rows="1"
+					v-model="account.name" :class="{ 'fw-bold': account.name }" v-if="!self" />
+				<input class="form-control" id="name" placeholder="any name you want (visible only to you)" type="text" rows="1"
+					v-model="$user.accountInfo.name" :class="{ 'fw-bold': $user.accountInfo.name }" v-else />
 			</div>
 
 			<div class="mb-2">
@@ -47,11 +32,13 @@
 					Notes
 					<span class="small ms-1 opacity-50" v-if="!account.notes">({{ maxNotesLength }} characters max)</span>
 				</label>
-				<textarea id="notes" class="form-control" placeholder="private note (visible only to you)" type="text" rows="2" v-model="account.notes" v-if="!self"></textarea>
-				<textarea id="notes" class="form-control" placeholder="private note (visible only to you)" type="text" rows="2" v-model="$user.accountInfo.notes" v-else></textarea>
+				<textarea id="notes" class="form-control" placeholder="private note (visible only to you)" type="text" rows="2"
+					v-model="account.notes" v-if="!self"></textarea>
+				<textarea id="notes" class="form-control" placeholder="private note (visible only to you)" type="text" rows="2"
+					v-model="$user.accountInfo.notes" v-else></textarea>
 			</div>
 
-			<div class="mb-2" v-if="account.publicKey">
+			<!-- <div class="mb-2" v-if="account.publicKey">
 				<label class="form-label d-flex justify-content-between">
 					<div>Public key</div>
 					<div class="d-flex align-items-center">
@@ -73,7 +60,7 @@
 						<i class="_icon_copy bg-black ms-2 _pointer" @click="copyToClipboard(account.address)"></i>
 					</div>
 				</label>
-			</div>
+			</div> -->
 		</div>
 	</div>
 </template>
@@ -81,22 +68,28 @@
 <style lang="scss" scoped>
 @import '@/scss/variables.scss';
 @import '@/scss/breakpoints.scss';
+
 ._avatar {
 	display: flex;
 	justify-content: center;
 	width: 100%;
+
 	._wrap {
 		position: relative;
+
 		._img_wrap {
 			width: 10rem;
 			height: 10rem;
+
 			@include media-breakpoint-up(sm) {
 				width: 14rem;
 				height: 14rem;
 			}
+
 			border-radius: 50%;
 			border: 5px solid $white;
 			overflow: hidden;
+
 			img,
 			svg {
 				height: 100%;
@@ -104,6 +97,7 @@
 				object-fit: cover;
 			}
 		}
+
 		a {
 			position: absolute;
 			bottom: 1rem;

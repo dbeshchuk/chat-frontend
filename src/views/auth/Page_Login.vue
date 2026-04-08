@@ -41,11 +41,11 @@
 		v-if="!$user.account && isPlatformAuthSupported">
 		<div class="_icon_logo bg-white"></div>
 
-		<div class="px-3 w-100 mb-3" v-if="$user.vaults.length && mode !== 'existing'">
+		<div class="px-3 w-100 mb-3" v-if="$userPQ.pqUserCards.length && mode !== 'existing'">
 			<button class="btn btn-outline-light w-100" @click="setMode('existing')">Connect existing account</button>
 		</div>
 
-		<div class="_input_block mb-3 w-100" v-if="$user.vaults.length && mode === 'existing'">
+		<div class="_input_block mb-3 w-100" v-if="$userPQ.pqUserCards.length && mode === 'existing'">
 			<div class="fs-4 text-center mb-2">Connect existing account</div>
 			<Account_Selector />
 		</div>
@@ -227,11 +227,12 @@ import * as $enigma from '@/libs/enigma';
 
 const $mitt = inject('$mitt');
 const $user = inject('$user');
-const $swal = inject('$swal');
+const $userPQ = inject('$userPQ');
+// const $swal = inject('$swal');
 const $route = inject('$route');
-const $loader = inject('$loader');
-const $isProd = inject('$isProd');
-const $router = inject('$router');
+// const $loader = inject('$loader');
+// const $isProd = inject('$isProd');
+// const $router = inject('$router');
 const $encryptionManager = inject('$encryptionManager');
 
 const mode = ref();
@@ -245,7 +246,7 @@ onMounted(async () => {
 	if ($route.query.sessionId) {
 		mode.value = 'connect';
 		$mitt.emit('modal::open', { id: 'account_connect' });
-	} else if ($user.vaults.length) {
+	} else if ($userPQ.pqUserCards.length) {
 		mode.value = 'existing';
 	}
 
