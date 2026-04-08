@@ -1,5 +1,5 @@
 <template>
-	<Account_Item :self="true" class="mb-2" />
+	<Account_Item_PQ :self="true" class="mb-2" />
 
 	<div class="border-bottom pt-1 mx-2 mb-2"></div>
 
@@ -69,6 +69,7 @@
 <style lang="scss" scoped>
 @import '@/scss/variables.scss';
 @import '@/scss/breakpoints.scss';
+
 ._account {
 	._avatar {
 		height: 3.2rem;
@@ -80,7 +81,8 @@
 </style>
 
 <script setup>
-import Account_Item from '@/components/Account_Item.vue';
+// import Account_Item from '@/components/Account_Item.vue';
+import Account_Item_PQ from '@/components/Account_Item_PQ.vue';
 import { inject } from 'vue';
 
 const $menuOpened = inject('$menuOpened');

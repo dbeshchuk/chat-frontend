@@ -3,12 +3,12 @@
 		<div class="_avatar">
 			<div class="_wrap">
 				<div class="_img_wrap">
-					<Avatar :name="account.address" variant="bauhaus" v-if="account.address && !account.avatar" />
+					<Avatar :name="account.user_hash || account.name || 'User'" variant="bauhaus" v-if="!account.avatar" />
 					<img :src="mediaUrl(account.avatar)" v-if="account.avatar" />
 				</div>
 
 				<a href="#" class="btn btn-dark rounded-pill p-2" @click.prevent="$refs.avatarImageInput.click()">
-					<i class="bg-white" :class="[account.avatar || account.avatar?.dataUrl ? '_icon_edit' : '_icon_plus']"></i>
+					<i class="bg-white" :class="[account.avatar ? '_icon_edit' : '_icon_plus']"></i>
 				</a>
 				<input class="_hidden" ref="avatarImageInput" type="file" :accept="ALLOWED_IMAGE_TYPES.join(',')"
 					@change="handleImage($event)" />
@@ -21,10 +21,8 @@
 					Name
 					<span class="small ms-1 opacity-50" v-if="!account.name">({{ maxNameLength }} characters max)</span>
 				</label>
-				<input class="form-control" id="name" placeholder="any name you want (visible only to you)" type="text" rows="1"
-					v-model="account.name" :class="{ 'fw-bold': account.name }" v-if="!self" />
-				<input class="form-control" id="name" placeholder="any name you want (visible only to you)" type="text" rows="1"
-					v-model="$user.accountInfo.name" :class="{ 'fw-bold': $user.accountInfo.name }" v-else />
+				<input class="form-control" id="name" placeholder="any name you want" type="text" rows="1"
+					v-model="account.name" :class="{ 'fw-bold': account.name }" @blur="saveChanges" />
 			</div>
 
 			<div class="mb-2">
@@ -32,35 +30,9 @@
 					Notes
 					<span class="small ms-1 opacity-50" v-if="!account.notes">({{ maxNotesLength }} characters max)</span>
 				</label>
-				<textarea id="notes" class="form-control" placeholder="private note (visible only to you)" type="text" rows="2"
-					v-model="account.notes" v-if="!self"></textarea>
-				<textarea id="notes" class="form-control" placeholder="private note (visible only to you)" type="text" rows="2"
-					v-model="$user.accountInfo.notes" v-else></textarea>
+				<textarea id="notes" class="form-control" placeholder="private note" type="text" rows="2"
+					v-model="account.notes" @blur="saveChanges"></textarea>
 			</div>
-
-			<!-- <div class="mb-2" v-if="account.publicKey">
-				<label class="form-label d-flex justify-content-between">
-					<div>Public key</div>
-					<div class="d-flex align-items-center">
-						<div>
-							{{ $filters.txHashShort(account.publicKey) }}
-						</div>
-						<i class="_icon_copy bg-black ms-2 _pointer" @click="copyPublicKey()"></i>
-					</div>
-				</label>
-			</div>
-
-			<div class="mb-2" v-if="account.address && !$isProd">
-				<label class="form-label d-flex justify-content-between">
-					<div>Wallet address</div>
-					<div class="d-flex align-items-center">
-						<a :href="$web3.blockExplorer + '/address/' + account.address" target="_blank" rel="noopener noreferrer">
-							{{ $filters.addressShort(account.address) }}
-						</a>
-						<i class="_icon_copy bg-black ms-2 _pointer" @click="copyToClipboard(account.address)"></i>
-					</div>
-				</label>
-			</div> -->
 		</div>
 	</div>
 </template>
@@ -109,9 +81,11 @@
 </style>
 
 <script setup>
+// TODO: PQ - This component already works with PQ user data
+// Future: Could be refactored to use $userPQ directly instead of props
+
 import { ref, onMounted, watch, inject } from 'vue';
 import imageResize from '@/utils/imageResize';
-import copyToClipboard from '@/utils/copyToClipboard';
 import errorMessage from '@/utils/errorMessage';
 import Avatar from 'vue-boring-avatars';
 import { mediaUrl } from '@/utils/mediaUrl';
@@ -119,8 +93,6 @@ import { uploadToIPFS } from '@/api/ipfs';
 
 const $swal = inject('$swal');
 const $loader = inject('$loader');
-const $user = inject('$user');
-const $mitt = inject('$mitt');
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const maxNameLength = 30;
@@ -129,34 +101,33 @@ const maxNotesLength = 300;
 const emit = defineEmits(['update']);
 const account = ref();
 
-const { accountIn, self } = defineProps({
+const { accountIn } = defineProps({
 	accountIn: { type: Object },
-	self: { type: Boolean },
 });
 
 onMounted(async () => {
 	account.value = JSON.parse(JSON.stringify(accountIn));
 
-	watch(
-		() => account.value.name,
-		(newVal) => {
-			if (newVal && newVal.length > maxNameLength) account.value.name = newVal.slice(0, maxNameLength);
-			emit('update', account.value);
-		},
-	);
-	watch(
-		() => account.value.notes,
-		(newVal) => {
-			if (newVal && newVal.length > maxNotesLength) account.value.notes = newVal.slice(0, maxNotesLength);
-			emit('update', account.value);
-		},
-	);
-	watch(
-		() => account.value.avatar,
-		() => {
-			emit('update', account.value);
-		},
-	);
+	// watch(
+	// 	() => account.value?.name,
+	// 	(newVal) => {
+	// 		if (newVal && newVal.length > maxNameLength) account.value.name = newVal.slice(0, maxNameLength);
+	// 		emit('update', account.value);
+	// 	},
+	// );
+	// watch(
+	// 	() => account.value?.notes,
+	// 	(newVal) => {
+	// 		if (newVal && newVal.length > maxNotesLength) account.value.notes = newVal.slice(0, maxNotesLength);
+	// 		emit('update', account.value);
+	// 	},
+	// );
+	// watch(
+	// 	() => account.value?.avatar,
+	// 	() => {
+	// 		emit('update', account.value);
+	// 	},
+	// );
 	watch(
 		() => accountIn,
 		(newVal) => {
@@ -166,12 +137,14 @@ onMounted(async () => {
 	);
 });
 
-const copyPublicKey = () => {
-	if (account.value.address === $user.account.address) {
-		$mitt.emit('swal::open', { id: 'copy_public_key' });
-	} else {
-		copyToClipboard(account.value.publicKey);
+const saveChanges = () => {
+	if (account.value.name && account.value.name.length > maxNameLength) {
+		account.value.name = account.value.name.slice(0, maxNameLength);
 	}
+	if (account.value.notes && account.value.notes.length > maxNotesLength) {
+		account.value.notes = account.value.notes.slice(0, maxNotesLength);
+	}
+	emit('update', account.value);
 };
 
 const reset = () => {
@@ -184,7 +157,6 @@ const handleImage = async (event) => {
 	try {
 		const file = Array.from(event.target.files)[0];
 		if (!ALLOWED_IMAGE_TYPES.includes(file.type)) throw Error(`"${file.name}" not supported media format`);
-		// Load the image
 		var reader = new FileReader();
 		reader.onload = function (readerEvent) {
 			var image = new Image();

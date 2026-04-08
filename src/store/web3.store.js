@@ -1,3 +1,7 @@
+// TODO: PHASE 4 - DELETE THIS FILE after PQ migration complete
+// Web3/LIT-based store - blockchain features will be future backup option
+// Keep for reference; PQ features don't need blockchain for core functionality
+
 import { defineStore } from 'pinia';
 //import { BuckItUpClient } from '../libs/buckitup';
 import { BuckItUpClient } from 'buckitup-sdk';

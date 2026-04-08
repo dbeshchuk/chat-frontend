@@ -118,17 +118,12 @@ export default defineConfig(({ command }) => {
 		server: {
 			proxy: {
 				'/api': {
-					target: 'https://buckitup.xyz',
+					target: 'https://buckitup.xyz/electric/v1',
 					changeOrigin: true,
 					rewrite: (path) => path.replace(/^\/api/, ''),
-					// secure: false,
+					secure: false,
 				},
 			},
-
-			// fs: {
-			// 	strict: false,
-			// 	allow: ['..']
-			// },
 		},
 		base: isBuild ? '/' : '/',
 		build: {
@@ -145,26 +140,6 @@ export default defineConfig(({ command }) => {
 					warn(warning); // Let Rollup handle other warnings normally
 				},
 				maxParallelFileOps: 10
-			},
-		},
-		// server: {
-		// https: {
-		// 	key: fs.readFileSync(path.resolve(__dirname, '../ssl/localhost-key.pem')),
-		// 	cert: fs.readFileSync(path.resolve(__dirname, '../ssl/localhost.pem')),
-		// },
-
-		//host: true, // Set to `true` or specify your local IP address
-		//port: 5999, // Default port (change if needed)
-		//open: true, // Automatically open in the default browser
-		// },
-		server: {
-			proxy: {
-				'/api': {
-					target: 'http://127.0.0.1:4444/electric/v1',
-					changeOrigin: true,
-					rewrite: (path) => path.replace(/^\/api/, ''),
-					secure: false,
-				},
 			},
 		},
 	}

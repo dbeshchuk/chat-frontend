@@ -1,6 +1,6 @@
 <template>
 	<div>
-		<div class="passkey-warning" v-if="!$user.account && !isPlatformAuthSupported">
+		<div class="passkey-warning" v-if="!$userPQ.currentUser && !isPlatformAuthSupported">
 			<div class="_icon_logo bg-white"></div>
 
 			<div class="warning-content">
@@ -38,14 +38,14 @@
 	</div>
 
 	<div class="d-flex flex-column justify-content-center align-items-center _block px-2 pt-5"
-		v-if="!$user.account && isPlatformAuthSupported">
+		v-if="!$userPQ.currentUser && isPlatformAuthSupported">
 		<div class="_icon_logo bg-white"></div>
 
-		<div class="px-3 w-100 mb-3" v-if="$userPQ.pqUserCards.length && mode !== 'existing'">
+		<div class="px-3 w-100 mb-3" v-if="$userPQ.myLocalUsers?.length && mode !== 'existing'">
 			<button class="btn btn-outline-light w-100" @click="setMode('existing')">Connect existing account</button>
 		</div>
 
-		<div class="_input_block mb-3 w-100" v-if="$userPQ.pqUserCards.length && mode === 'existing'">
+		<div class="_input_block mb-3 w-100" v-if="$userPQ.myLocalUsers?.length && mode === 'existing'">
 			<div class="fs-4 text-center mb-2">Connect existing account</div>
 			<Account_Selector />
 		</div>
@@ -221,19 +221,22 @@
 </style>
 
 <script setup>
+// TODO: REFACTOR - Phase 4: Remove $user and $encryptionManager (Web3)
 import Account_Selector from '@/components/Account_Selector.vue';
 import { inject, ref, onMounted, onUnmounted, computed, nextTick } from 'vue';
 import * as $enigma from '@/libs/enigma';
 
 const $mitt = inject('$mitt');
-const $user = inject('$user');
+// TODO: PHASE 4 - Remove $user (Web3 store)
+const $user = inject('$user'); // TODO: PHASE 4 - Delete after migration
 const $userPQ = inject('$userPQ');
 // const $swal = inject('$swal');
 const $route = inject('$route');
 // const $loader = inject('$loader');
 // const $isProd = inject('$isProd');
 // const $router = inject('$router');
-const $encryptionManager = inject('$encryptionManager');
+// TODO: PHASE 4 - Remove $encryptionManager (Web3 encryption)
+const $encryptionManager = inject('$encryptionManager'); // TODO: PHASE 4 - Delete after migration
 
 const mode = ref();
 const isPlatformAuthSupported = ref(false)
@@ -246,7 +249,7 @@ onMounted(async () => {
 	if ($route.query.sessionId) {
 		mode.value = 'connect';
 		$mitt.emit('modal::open', { id: 'account_connect' });
-	} else if ($userPQ.pqUserCards.length) {
+	} else if ($userPQ.myLocalUsers?.length) {
 		mode.value = 'existing';
 	}
 
@@ -257,6 +260,8 @@ onUnmounted(async () => {
 	$mitt.off('account::created', updateData);
 });
 
+// TODO: PHASE 4 - Delete this function after PQ migration
+// Web3 feature - not needed in PQ architecture
 const updateData = async () => {
 	$user.vaults = await $encryptionManager.getVaults();
 };

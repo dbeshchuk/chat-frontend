@@ -1,25 +1,10 @@
 <template>
 	<div>
-		<!-- <div class="_contacts_list mb-2" v-if="$user.vaults.length">
-			<div class="_search" v-if="$user.vaults.length > 5">
-				<div class="_input_search">
-					<div class="_icon_search"></div>
-					<input class="" type="text" v-model="search" autocomplete="off" placeholder="Search..." />
-					<div class="_icon_times" v-if="search" @click="search = null"></div>
-				</div>
-			</div>
-			<div class="_list">
-				<div class="_contact" @click="select(account)" v-for="account in filteredList"
-					:class="{ _selected: account.publicKey === selected?.publicKey, _connected: account.publicKey === $user.account?.publicKey }">
-					<Account_Item :account="account" />
-				</div>
-			</div>
-		</div> -->
+		<!-- TODO: REFACTOR - Change $userPQ.pqUserCards to $userPQ.myLocalUsers -->
+		<div class="_contacts_list mb-2" v-if="$userPQ.myLocalUsers">
+			<h6>Select Account</h6>
 
-		<div class="_contacts_list mb-2" v-if="$userPQ.pqUserCards">
-			<h6>PQ Test</h6>
-
-			<div class="_search" v-if="$userPQ.pqUserCards.length > 5">
+			<div class="_search" v-if="$userPQ.myLocalUsers.length > 5">
 				<div class="_input_search">
 					<div class="_icon_search"></div>
 					<input class="" type="text" v-model="search" autocomplete="off" placeholder="Search..." />
@@ -28,8 +13,9 @@
 			</div>
 
 			<div class="_list">
-				<div class="_contact" @click="selectPQ(account)" v-for="account in $userPQ.pqUserCards"
-					:class="{ _selected: account.user_hash === selected?.user_hash, _connected: account.user_hash === $user.account?.user_hash }">
+				<!-- TODO: REFACTOR - pqUserCards -> myLocalUsers -->
+				<div class="_contact" @click="selectPQ(account)" v-for="account in $userPQ.myLocalUsers"
+					:class="{ _selected: account.user_hash === selected?.user_hash, _connected: account.user_hash === $userPQ.currentUser?.user_hash }">
 					<Account_Item_PQ :account="account" />
 				</div>
 			</div>
@@ -37,18 +23,18 @@
 
 		<div class="d-flex w-100" v-if="selected">
 			<button type="button" class="btn btn-dark d-flex justify-content-center align-items-center w-100"
-				v-if="selected.publicKey === $user.account?.publicKey" @click="logout()">
+				v-if="selected.user_hash === $userPQ.currentUser?.user_hash" @click="logout()">
 				<i class="_icon_signout bg-white me-2"></i> Logout
 			</button>
 
 			<button type="button" class="btn btn-dark d-flex justify-content-center align-items-center w-100"
-				v-if="selected.publicKey !== $user.account?.publicKey" @click="signin()">
+				v-if="selected.user_hash !== $userPQ.currentUser?.user_hash" @click="signinPQ()">
 				<i class="_icon_signin bg-white me-2"></i> Sign in
 			</button>
 
 			<button type="button" class="btn btn-dark d-flex justify-content-center align-items-center ms-1"
 				@click="$mitt.emit('modal::open', { id: 'account_backup' })"
-				v-if="selected.publicKey === $user.account?.publicKey" v-tooltip="'Backup account data'">
+				v-if="selected.user_hash === $userPQ.currentUser?.user_hash" v-tooltip="'Backup account data'">
 				<i class="_icon_backups bg-white px-2"></i>
 			</button>
 
@@ -139,13 +125,15 @@ const search = ref();
 onMounted(async () => {
 	console.log('account selector mounted')
 
-	// $user.vaults = await $encryptionManager.getVaults();
+	// $user.vaults = await $encryptionManager.getVaults(); // TODO: PHASE 4 - Remove Web3
 
-	$userPQ.pqUserCards = await $encryptionManagerPQ.getLocalUserCards();
+	// TODO: REFACTOR - Store already has myLocalUsers, no need to re-fetch
+	// $userPQ.pqUserCards = await $encryptionManagerPQ.getLocalUserCards();
+	// Use: $userPQ.myLocalUsers instead (already populated by store)
 
 	selected.value = $userPQ.currentUser;
 
-	console.log('pq user vaults', $userPQ.pqUserCards)
+	console.log('pq user vaults', $userPQ.myLocalUsers) // TODO: REFACTOR - was pqUserCards
 
 	// if (!$user.account && $user.vaults.length) {
 	// 	let currentUser = $user.vaults.find((u) => u.current);
@@ -335,13 +323,15 @@ const signinPQ = async () => {
 
 const deleteAccount = async () => {
 	if (!(await $swalModal.value.open({ id: 'delete_account' }))) return;
-	if ($user.account?.address === selected.value.address) {
-		$user.logout();
-		$router.push({ name: 'login' });
-		$mitt.emit('modal::close');
-	}
-	const idx = $user.vaults.findIndex((v) => v.address === selected.value.address);
-	if (idx > -1) $user.vaults.splice(idx, 1);
+
+	// TODO: PQ Account Selector - commented out old Web3 code
+	// if ($user.account?.address === selected.value.address) {
+	//     $user.logout();
+	//     $router.push({ name: 'login' });
+	//     $mitt.emit('modal::close');
+	// }
+	// const idx = $user.vaults.findIndex((v) => v.address === selected.value.address);
+	// if (idx > -1) $user.vaults.splice(idx, 1);
 
 	reset();
 };
@@ -352,7 +342,10 @@ const logout = async () => {
 };
 
 const signout = async () => {
-	await $user.logout();
+	// TODO: PQ Account Selector - commented out old Web3 code
+	// await $user.logout();
+
+	await $userPQ.logout();
 	reset();
 	if ($route.name !== 'login') {
 		$router.push({ name: 'login' });

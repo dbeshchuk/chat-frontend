@@ -1,12 +1,16 @@
 import { defineStore } from 'pinia';
 import { ref, computed, watch } from 'vue';
 import { EncryptionManagerPQ } from '@/libs/EncryptionManagerPQ';
-import { localDB } from '@/utils/db/localDBv3';
+import { localDB } from '@/utils/db/localDBv2';
 
 export const userPQStore = defineStore('userPQ', () => {
   const em = ref(null);
   const isInitialized = ref(false);
+  const isOnline = ref(typeof navigator !== 'undefined' ? navigator.onLine : true);
 
+  // TODO: REFACTOR - Remove pqUserCards; it's a duplicate of myLocalUsers
+  // This was added during initial PQ work but myLocalUsers already exists
+  // Search usages: Account_Selector.vue, App.vue (commented), Menu_Backup.vue (commented)
   const pqUserCards = ref([]);
 
   const currentUser = ref(null);
@@ -103,6 +107,34 @@ export const userPQStore = defineStore('userPQ', () => {
     return true;
   };
 
+  const updateCurrentUserProfile = async ({ name, notes, avatar }) => {
+    if (!em.value || !currentUserHash.value) return false;
+
+    await em.value.updateUserStorage({ name, notes, avatar });
+
+    if (currentUser.value) {
+      if (name !== undefined) currentUser.value.name = name;
+      if (!currentUser.value.userStorage) {
+        currentUser.value.userStorage = {};
+      }
+      if (notes !== undefined) currentUser.value.userStorage.notes = notes;
+      if (avatar !== undefined) currentUser.value.userStorage.avatar = avatar;
+    }
+
+    await localDB.upsertUserLocal({
+      user_hash: currentUserHash.value,
+      name: currentUser.value?.name,
+      sign_pkey: currentUser.value?.sign_pkey,
+      crypt_pkey: null,
+      crypt_cert: null,
+      contact_pkey: null,
+      contact_cert: null
+    });
+
+    await refreshMyLocalUsers();
+    return true;
+  };
+
   const getUserByHash = (userHash) => {
     return allNetworkUsers.value.find(u => u.user_hash === userHash) ||
       myLocalUsers.value.find(u => u.user_hash === userHash);
@@ -132,7 +164,9 @@ export const userPQStore = defineStore('userPQ', () => {
     currentUser: currentUserFull,
     myLocalUsers,
     allNetworkUsers,
+    isOnline,
 
+    // TODO: REFACTOR - Remove pqUserCards from return (duplicate of myLocalUsers)
     pqUserCards,
 
     initialize,
@@ -140,6 +174,7 @@ export const userPQStore = defineStore('userPQ', () => {
     login,
     logout,
     updateCurrentUserName,
+    updateCurrentUserProfile,
     refreshMyLocalUsers,
     refreshNetworkUsers,
     refreshAllData,

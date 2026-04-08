@@ -5,7 +5,7 @@ import { ml_dsa87 } from '@noble/post-quantum/ml-dsa.js';
 import { sha3_512 } from '@noble/hashes/sha3';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
 import { randomBytes } from '@noble/post-quantum/utils.js';
-import { localDB } from '../utils/db/localDBv3';
+// import { localDB } from '../utils/db/localDBv2';
 
 const VAULT_KEY_OPTIONS = {
   authenticatorSelection: {
@@ -237,5 +237,34 @@ export class EncryptionManagerPQ extends EventTarget {
       : challenge;
 
     return ml_dsa87.sign(msg, this.#signSkey);
+  }
+
+  // Update User Storage
+
+  async updateUserStorage({ name, notes, avatar }) {
+    if (!this.#currentUserHash) {
+      throw new Error('No user is currently logged in');
+    }
+
+    const idx = this.#localUserCards.findIndex(u => u.user_hash === this.#currentUserHash);
+    if (idx === -1) {
+      throw new Error('User not found in local cards');
+    }
+
+    const current = this.#localUserCards[idx];
+
+    this.#localUserCards[idx] = {
+      ...current,
+      name: name !== undefined ? name : current.name,
+      userStorage: {
+        ...current.userStorage,
+        notes: notes !== undefined ? notes : current.userStorage?.notes,
+        avatar: avatar !== undefined ? avatar : current.userStorage?.avatar
+      }
+    };
+
+    await this.#saveLocalUserCards();
+
+    return this.#localUserCards[idx];
   }
 }

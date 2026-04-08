@@ -64,22 +64,22 @@ class LocalDBv2 {
       console.log('response', response.body)
     })
 
-    // this.syncEngine = await this.db.electric.syncShapeToTable({
-    //   shape: {
-    //     url: new URL(`http://localhost:4444/electric/v1/user_card`, window.location.origin).toString(),
-    //     params: {
-    //       table: "user_cards",
-    //     },
-    //   },
-    //   table: "user_cards_synced",
-    //   primaryKey: ["user_hash"],
-    //   shapeKey: "user_cards_public",
-    //   onError: (error) => {
-    //     console.error("Shape sync error:", error);
+    this.syncEngine = await this.db.electric.syncShapeToTable({
+      shape: {
+        url: new URL(`/api/user_card`, window.location.origin).toString(),
+        params: {
+          table: "user_cards",
+        },
+      },
+      table: "user_cards_synced",
+      primaryKey: ["user_hash"],
+      shapeKey: "user_cards_public",
+      onError: (error) => {
+        console.error("Shape sync error:", error);
 
-    //     setOffline();
-    //   },
-    // });
+        setOffline();
+      },
+    });
   }
 
   async getUsers() {

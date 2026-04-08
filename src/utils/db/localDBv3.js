@@ -1,4 +1,3 @@
-// utils/db/localDBv2.js
 import { PGliteWorker } from "@electric-sql/pglite/worker";
 import { electricSync } from "@electric-sql/pglite-sync";
 import { live } from "@electric-sql/pglite/live";
@@ -55,10 +54,14 @@ class LocalDB {
   async #initSyncEngine() {
     const { setOffline } = useOnlineStatus();
 
+    fetch('/api/user_card?offset=-1').then(response => {
+      console.log('response', response.body)
+    })
+
     this.#syncEngine = await this.#db.electric.syncShapeToTable({
       shape: {
-        url: `https://buckitup.xyz/electric/v1/user_cards`,   // ← новий endpoint
-        params: { table: "user_cards_synced" },
+        url: `/api/user_card`,
+        params: { table: "user_cards" },
       },
       table: "user_cards_synced",
       primaryKey: ["user_hash"],

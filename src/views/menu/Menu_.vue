@@ -353,16 +353,21 @@ onMounted(async () => {
 	}
 });
 
+// TODO: REFACTOR - These hardcoded URLs should use $router.push() for SPA navigation
+// External URLs break the SPA experience and re-initialize the app
 const navigateToHome = () => {
 	// Change the browser location to `/` and reload the page
 	window.location.href = '/';
 };
 
 const navigateToRooms = () => {
+	// TODO: REFACTOR - Use internal route: this.$router.push('/rooms')
+	// Or configure vue-router for external redirects
 	window.location.href = 'https://buckitup.xyz/rooms';
 };
 
 const navigateToChats = () => {
+	// TODO: REFACTOR - Use internal route: this.$router.push('/chats')
 	window.location.href = 'https://buckitup.xyz/chats';
 };
 

@@ -15,9 +15,9 @@
         <div class="_pubk" v-if="shortCode">[{{ shortCode }}]</div>
       </div>
 
-      <div class="_notes" v-if="acc.userStorage.notes">
+      <div class="_notes" v-if="acc.userStorage?.notes">
         <span v-if="acc.highlightedNotes" v-html="acc.highlightedNotes"></span>
-        <span v-else>{{ acc.userStorage.notes }}</span>
+        <span v-else>{{ acc.userStorage?.notes }}</span>
       </div>
     </div>
   </div>
@@ -91,7 +91,7 @@ import Avatar from 'vue-boring-avatars';
 import { inject, computed } from 'vue';
 
 const defaultAvatar = '/img/profile.webp';
-const $user = inject('$user');
+const $userPQ = inject('$userPQ');
 const $enigma = inject('$enigma');
 
 const { account, self } = defineProps({
@@ -100,7 +100,7 @@ const { account, self } = defineProps({
 });
 
 const acc = computed(() => {
-  return self ? { ...$user.account, ...$user.accountInfo } : account;
+  return self ? { ...$userPQ.currentUser } : account;
 });
 
 const shortCode = computed(() => {
