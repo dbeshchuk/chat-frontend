@@ -1,4 +1,5 @@
-<template>    
+<template>
+    <!-- TODO: PQ - Backup features need PQ implementation (Coming Soon) -->
     <router-link :to="{ name: 'backup_list' }" custom v-slot="{ isActive, navigate }">
         <div class="_sub_menu_btn" :class="{ '_active': isActive }" @click="select(navigate)">
             <div class="_i_block">

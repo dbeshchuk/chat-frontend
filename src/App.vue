@@ -1,7 +1,5 @@
 <template>
-
-
-	<div class="wrapper" v-if="$user.account">
+	<div class="wrapper" v-if="$userPQ.currentUser">
 		<Suspense>
 			<PGLiteProvider>
 				<Menu class="_menu" :class="{ _opened: $menuOpened }" />
@@ -10,7 +8,7 @@
 					@click="$menuOpened = false">
 				</div>
 
-				<div class="_main" v-if="$user.account">
+				<div class="_main" v-if="$userPQ.currentUser">
 					<router-view v-slot="{ Component, route }">
 						<component :is="Component" :key="route.path" />
 					</router-view>
@@ -19,7 +17,7 @@
 		</Suspense>
 	</div>
 
-	<div v-if="!$user.account" class="_login">
+	<div v-if="!$userPQ.currentUser" class="_login">
 		<router-view v-slot="{ Component, route }">
 			<component :is="Component" :key="route.path" />
 		</router-view>
@@ -120,6 +118,9 @@
 </style>
 
 <script setup>
+// TODO: REFACTOR - Phase 1: Remove $user injection after user.store.js deletion
+// TODO: REFACTOR - Phase 1: Standardize on inject() pattern, remove provide() duplicates
+
 import Loader from './components/Loader.vue';
 import Menu from '@/views/menu/Menu_.vue';
 import Modal from '@/components/modal/Modal_.vue';
@@ -130,13 +131,18 @@ import { useRoute, useRouter } from 'vue-router';
 
 const $socket = inject('$socket');
 const $mitt = inject('$mitt');
-const $user = inject('$user');
+// TODO: REFACTOR - Remove $user (Web3 store) - Phase 4
+const $user = inject('$user'); // TODO: PHASE 4 - Delete after migration
+const $userPQ = inject('$userPQ');
 const $breakpoint = inject('$breakpoint');
+
 const $encryptionManager = inject('$encryptionManager');
-const $web3 = inject('$web3');
-const $swal = inject('$swal');
-const $loader = inject('$loader');
-const $isProd = inject('$isProd');
+const $encryptionManagerPQ = inject('$encryptionManagerPQ');
+
+// const $web3 = inject('$web3');
+// const $swal = inject('$swal');
+// const $loader = inject('$loader');
+// const $isProd = inject('$isProd');
 
 const $appstate = ref({});
 provide('$appstate', $appstate);
@@ -166,18 +172,25 @@ watch(
 	},
 );
 
-onMounted(async () => {
-	// console.log('mount start')
+	onMounted(async () => {
+		// TODO: REFACTOR - Remove $user references (Web3 store) - Phase 4
+		// console.log('mount start')
 
-	$user.setEncryptionManager($encryptionManager);
+		// $user.setEncryptionManager($encryptionManager);
 
-	window.addEventListener('online', () => ($user.isOnline = navigator.onLine));
-	window.addEventListener('offline', () => ($user.isOnline = navigator.onLine));
-	setTimeout(function tick() {
-		timestamp.value = Math.floor(Date.now().valueOf() / 1000);
-		setTimeout(tick, 1000);
-	}, 1000);
+		// TODO: REFACTOR - Use $userPQ.isOnline instead of $user.isOnline
+		window.addEventListener('online', () => ($user.isOnline = navigator.onLine));
+		window.addEventListener('offline', () => ($user.isOnline = navigator.onLine));
+		setTimeout(function tick() {
+			timestamp.value = Math.floor(Date.now().valueOf() / 1000);
+			setTimeout(tick, 1000);
+		}, 1000);
 
-	$user.vaults = await $encryptionManager.getVaults();
-});
+		// Initialize PQ user store
+		await $userPQ.initialize();
+
+		// $user.vaults = await $encryptionManager.getVaults(); // TODO: Remove - Web3 feature
+
+		// console.log('local cards', $userPQ.myLocalUsers) // TODO: REFACTOR - was pqUserCards
+	});
 </script>

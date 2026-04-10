@@ -1,34 +1,40 @@
 <template>
 	<div>
-		<div class="_contacts_list mb-2" v-if="$user.vaults.length">
-			<div class="_search" v-if="$user.vaults.length > 5">
+		<!-- TODO: REFACTOR - Change $userPQ.pqUserCards to $userPQ.myLocalUsers -->
+		<div class="_contacts_list mb-2" v-if="$userPQ.myLocalUsers">
+			<h6>Select Account</h6>
+
+			<div class="_search" v-if="$userPQ.myLocalUsers.length > 5">
 				<div class="_input_search">
 					<div class="_icon_search"></div>
 					<input class="" type="text" v-model="search" autocomplete="off" placeholder="Search..." />
 					<div class="_icon_times" v-if="search" @click="search = null"></div>
 				</div>
 			</div>
+
 			<div class="_list">
-				<div class="_contact" @click="select(account)" v-for="account in filteredList"
-					:class="{ _selected: account.publicKey === selected?.publicKey, _connected: account.publicKey === $user.account?.publicKey }">
-					<Account_Item :account="account" />
+				<!-- TODO: REFACTOR - pqUserCards -> myLocalUsers -->
+				<div class="_contact" @click="selectPQ(account)" v-for="account in $userPQ.myLocalUsers"
+					:class="{ _selected: account.user_hash === selected?.user_hash, _connected: account.user_hash === $userPQ.currentUser?.user_hash }">
+					<Account_Item_PQ :account="account" />
 				</div>
 			</div>
 		</div>
 
 		<div class="d-flex w-100" v-if="selected">
 			<button type="button" class="btn btn-dark d-flex justify-content-center align-items-center w-100"
-				v-if="selected.publicKey === $user.account?.publicKey" @click="logout()">
+				v-if="selected.user_hash === $userPQ.currentUser?.user_hash" @click="logout()">
 				<i class="_icon_signout bg-white me-2"></i> Logout
 			</button>
 
-			<!--button type="button" class="btn btn-dark d-flex justify-content-center align-items-center w-100" v-if="selected.publicKey !== $user.account?.publicKey" @click="signin()">
+			<button type="button" class="btn btn-dark d-flex justify-content-center align-items-center w-100"
+				v-if="selected.user_hash !== $userPQ.currentUser?.user_hash" @click="signinPQ()">
 				<i class="_icon_signin bg-white me-2"></i> Sign in
-			</button-->
+			</button>
 
 			<button type="button" class="btn btn-dark d-flex justify-content-center align-items-center ms-1"
 				@click="$mitt.emit('modal::open', { id: 'account_backup' })"
-				v-if="selected.publicKey === $user.account?.publicKey" v-tooltip="'Backup account data'">
+				v-if="selected.user_hash === $userPQ.currentUser?.user_hash" v-tooltip="'Backup account data'">
 				<i class="_icon_backups bg-white px-2"></i>
 			</button>
 
@@ -43,6 +49,10 @@
 <style lang="scss" scoped>
 @import '@/scss/variables.scss';
 @import '@/scss/breakpoints.scss';
+
+h6 {
+	text-align: center;
+}
 
 ._contacts_list {
 	max-height: 30rem; // calc(100vh - 3rem);
@@ -93,87 +103,168 @@
 
 <script setup>
 import { computed, inject, ref, onMounted, nextTick } from 'vue';
-import Account_Item from '@/components/Account_Item.vue';
+// import Account_Item from '@/components/Account_Item.vue';
+import Account_Item_PQ from '@/components/Account_Item_PQ.vue';
 
 const $mitt = inject('$mitt');
 const $loader = inject('$loader');
 const $web3 = inject('$web3');
-const $user = inject('$user');
+// const $user = inject('$user');
+const $userPQ = inject('$userPQ');
+
 const $swal = inject('$swal');
 const $router = inject('$router');
 const $route = inject('$route');
 const $swalModal = inject('$swalModal');
 const $isProd = inject('$isProd');
-const $encryptionManager = inject('$encryptionManager');
+// const $encryptionManager = inject('$encryptionManager');
+const $encryptionManagerPQ = inject('$encryptionManagerPQ');
 const selected = ref();
 const search = ref();
 
 onMounted(async () => {
-	$user.vaults = await $encryptionManager.getVaults();
-	selected.value = $user.account;
+	console.log('account selector mounted')
 
-	if (!$user.account && $user.vaults.length) {
-		let currentUser = $user.vaults.find((u) => u.current);
-		if (currentUser) {
-			select(currentUser);
-		}
-	}
+	// $user.vaults = await $encryptionManager.getVaults(); // TODO: PHASE 4 - Remove Web3
+
+	// TODO: REFACTOR - Store already has myLocalUsers, no need to re-fetch
+	// $userPQ.pqUserCards = await $encryptionManagerPQ.getLocalUserCards();
+	// Use: $userPQ.myLocalUsers instead (already populated by store)
+
+	selected.value = $userPQ.currentUser;
+
+	console.log('pq user vaults', $userPQ.myLocalUsers) // TODO: REFACTOR - was pqUserCards
+
+	// if (!$user.account && $user.vaults.length) {
+	// 	let currentUser = $user.vaults.find((u) => u.current);
+	// 	if (currentUser) {
+	// 		select(currentUser);
+	// 	}
+	// }
 });
 
-const select = (account) => {
+// const select = (account) => {
+// 	reset();
+// 	selected.value = account;
+// 	signin();
+// };
+
+const selectPQ = (account) => {
 	reset();
 	selected.value = account;
-	signin();
+	signinPQ();
 };
 
 const reset = () => {
 	selected.value = null;
 };
 
-const filteredList = computed(() => {
-	function highlightText(text, searchTerm) {
-		if (!searchTerm || !text) return text;
-		const regex = new RegExp(`(${searchTerm})`, 'gi');
-		return text.replace(regex, `<span class="_highlight_search_text">$1</span>`); // Wrap matched text with <mark>
-	}
+// const filteredList = computed(() => {
+// 	function highlightText(text, searchTerm) {
+// 		if (!searchTerm || !text) return text;
+// 		const regex = new RegExp(`(${searchTerm})`, 'gi');
+// 		return text.replace(regex, `<span class="_highlight_search_text">$1</span>`); // Wrap matched text with <mark>
+// 	}
 
-	let list, searchTerm;
-	if (!search.value) {
-		list = $user.vaults;
-	} else {
-		searchTerm = search.value.toLowerCase();
-		list = $user.vaults.filter((c) =>
-			[c.name, c.notes].some(
-				(
-					value, //, c.address
-				) => value && value.toLowerCase().includes(searchTerm),
-			),
-		);
-	}
+// 	let list, searchTerm;
+// 	if (!search.value) {
+// 		list = $user.vaults;
+// 	} else {
+// 		searchTerm = search.value.toLowerCase();
+// 		list = $user.vaults.filter((c) =>
+// 			[c.name, c.notes].some(
+// 				(
+// 					value, //, c.address
+// 				) => value && value.toLowerCase().includes(searchTerm),
+// 			),
+// 		);
+// 	}
 
-	if ($user.account?.address) {
-		list = list.slice().sort((a, b) => {
-			if (a.address === $user.account.address) return -1;
-			if (b.address === $user.account.address) return 1;
-			return 0;
-		});
-	}
+// 	if ($user.account?.address) {
+// 		list = list.slice().sort((a, b) => {
+// 			if (a.address === $user.account.address) return -1;
+// 			if (b.address === $user.account.address) return 1;
+// 			return 0;
+// 		});
+// 	}
 
-	return list.map((c) => ({
-		...c,
-		highlightedName: highlightText(c.name, searchTerm),
-		highlightedAddress: highlightText(c.address, searchTerm),
-		highlightedNotes: highlightText(c.notes, searchTerm),
-	}));
-});
+// 	return list.map((c) => ({
+// 		...c,
+// 		highlightedName: highlightText(c.name, searchTerm),
+// 		highlightedAddress: highlightText(c.address, searchTerm),
+// 		highlightedNotes: highlightText(c.notes, searchTerm),
+// 	}));
+// });
 
-const signin = async () => {
-	$loader.show();
+// const signin = async () => {
+// 	$loader.show();
+
+// 	let swalInstance;
+// 	try {
+// 		const nextUser = JSON.parse(JSON.stringify(selected.value));
+// 		await $user.logout();
+
+// 		reset();
+
+// 		if ($route.name !== 'login') {
+// 			$router.push({ name: 'login' });
+// 			$mitt.emit('modal::close');
+// 		}
+
+// 		if ($isProd) {
+// 			swalInstance = $swal.fire({
+// 				icon: 'info',
+// 				title: 'Authenticate with PassKey',
+// 				footer: 'Please confirn PassKey on your device when it prompts',
+// 				timer: 3000,
+// 			});
+// 		}
+
+// 		await $encryptionManager.connectToVault(nextUser.vaultId);
+
+// 		if (swalInstance) swalInstance.close();
+
+// 		if (!$encryptionManager.isAuth) {
+// 			$loader.hide();
+// 			return;
+// 		}
+
+// 		await $user.fromVaultFormat(await $encryptionManager.getData());
+
+// 		await $user.openStorage({
+// 			accountInfo: {
+// 				name: nextUser.name,
+// 				notes: nextUser.notes,
+// 				avatar: nextUser.avatar,
+// 			},
+// 		});
+
+// 		await $user.checkMetaWallet();
+
+// 		nextTick(() => {
+// 			try {
+// 				$router.replace({ name: 'account_info' });
+// 			} catch (error) {
+// 				console.log('signin', error);
+// 			}
+// 		});
+
+// 		$mitt.emit('modal::close');
+// 	} catch (error) {
+// 		console.error('signin', error);
+// 	}
+// 	$loader.hide();
+// };
+
+const signinPQ = async () => {
+	// $loader.show();
 
 	let swalInstance;
+
 	try {
 		const nextUser = JSON.parse(JSON.stringify(selected.value));
-		await $user.logout();
+
+		await $userPQ.logout();
 
 		reset();
 
@@ -191,26 +282,26 @@ const signin = async () => {
 			});
 		}
 
-		await $encryptionManager.connectToChatVault(nextUser.vaultId);
+		await $userPQ.login(nextUser.user_hash);
 
 		if (swalInstance) swalInstance.close();
 
-		if (!$encryptionManager.isAuth) {
-			$loader.hide();
-			return;
-		}
+		// if (!$encryptionManagerPQ.isAuth) {
+		// $loader.hide();
+		// return;
+		// }
 
-		await $user.fromVaultFormat(await $encryptionManager.getChatData());
+		// await $user.fromVaultFormat(await $encryptionManager.getData());
 
-		await $user.openStorage({
-			accountInfo: {
-				name: nextUser.name,
-				notes: nextUser.notes,
-				avatar: nextUser.avatar,
-			},
-		});
+		// await $user.openStorage({
+		// 	accountInfo: {
+		// 		name: nextUser.name,
+		// 		notes: nextUser.notes,
+		// 		avatar: nextUser.avatar,
+		// 	},
+		// });
 
-		await $user.checkMetaWallet();
+		// await $user.checkMetaWallet();
 
 		nextTick(() => {
 			try {
@@ -224,18 +315,23 @@ const signin = async () => {
 	} catch (error) {
 		console.error('signin', error);
 	}
-	$loader.hide();
+
+	console.log('is loader next')
+
+	// $loader.hide();
 };
 
 const deleteAccount = async () => {
 	if (!(await $swalModal.value.open({ id: 'delete_account' }))) return;
-	if ($user.account?.address === selected.value.address) {
-		$user.logout();
-		$router.push({ name: 'login' });
-		$mitt.emit('modal::close');
-	}
-	const idx = $user.vaults.findIndex((v) => v.address === selected.value.address);
-	if (idx > -1) $user.vaults.splice(idx, 1);
+
+	// TODO: PQ Account Selector - commented out old Web3 code
+	// if ($user.account?.address === selected.value.address) {
+	//     $user.logout();
+	//     $router.push({ name: 'login' });
+	//     $mitt.emit('modal::close');
+	// }
+	// const idx = $user.vaults.findIndex((v) => v.address === selected.value.address);
+	// if (idx > -1) $user.vaults.splice(idx, 1);
 
 	reset();
 };
@@ -246,7 +342,10 @@ const logout = async () => {
 };
 
 const signout = async () => {
-	await $user.logout();
+	// TODO: PQ Account Selector - commented out old Web3 code
+	// await $user.logout();
+
+	await $userPQ.logout();
 	reset();
 	if ($route.name !== 'login') {
 		$router.push({ name: 'login' });

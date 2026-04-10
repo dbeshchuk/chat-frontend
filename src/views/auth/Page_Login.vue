@@ -1,6 +1,6 @@
 <template>
 	<div>
-		<div class="passkey-warning" v-if="!$user.account && !isPlatformAuthSupported">
+		<div class="passkey-warning" v-if="!$userPQ.currentUser && !isPlatformAuthSupported">
 			<div class="_icon_logo bg-white"></div>
 
 			<div class="warning-content">
@@ -38,14 +38,14 @@
 	</div>
 
 	<div class="d-flex flex-column justify-content-center align-items-center _block px-2 pt-5"
-		v-if="!$user.account && isPlatformAuthSupported">
+		v-if="!$userPQ.currentUser && isPlatformAuthSupported">
 		<div class="_icon_logo bg-white"></div>
 
-		<div class="px-3 w-100 mb-3" v-if="$user.vaults.length && mode !== 'existing'">
+		<div class="px-3 w-100 mb-3" v-if="$userPQ.myLocalUsers?.length && mode !== 'existing'">
 			<button class="btn btn-outline-light w-100" @click="setMode('existing')">Connect existing account</button>
 		</div>
 
-		<div class="_input_block mb-3 w-100" v-if="$user.vaults.length && mode === 'existing'">
+		<div class="_input_block mb-3 w-100" v-if="$userPQ.myLocalUsers?.length && mode === 'existing'">
 			<div class="fs-4 text-center mb-2">Connect existing account</div>
 			<Account_Selector />
 		</div>
@@ -54,7 +54,8 @@
 
 		<div class="px-3 w-100 mb-3">
 			<button class="btn btn-outline-light w-100" @click="setMode('create')">
-				Create new account</button>
+				Create new account
+			</button>
 		</div>
 
 		<div class="px-3 w-100 mb-3">
@@ -220,27 +221,27 @@
 </style>
 
 <script setup>
+// TODO: REFACTOR - Phase 4: Remove $user and $encryptionManager (Web3)
 import Account_Selector from '@/components/Account_Selector.vue';
 import { inject, ref, onMounted, onUnmounted, computed, nextTick } from 'vue';
 import * as $enigma from '@/libs/enigma';
 
 const $mitt = inject('$mitt');
-const $user = inject('$user');
-const $swal = inject('$swal');
+// TODO: PHASE 4 - Remove $user (Web3 store)
+const $user = inject('$user'); // TODO: PHASE 4 - Delete after migration
+const $userPQ = inject('$userPQ');
+// const $swal = inject('$swal');
 const $route = inject('$route');
-const $loader = inject('$loader');
-const $isProd = inject('$isProd');
-const $router = inject('$router');
-const $encryptionManager = inject('$encryptionManager');
+// const $loader = inject('$loader');
+// const $isProd = inject('$isProd');
+// const $router = inject('$router');
+// TODO: PHASE 4 - Remove $encryptionManager (Web3 encryption)
+const $encryptionManager = inject('$encryptionManager'); // TODO: PHASE 4 - Delete after migration
 
 const mode = ref();
 const isPlatformAuthSupported = ref(false)
 
 onMounted(async () => {
-	// console.log('is supported', PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable())
-
-	console.log('user account', $user.account)
-
 	isPlatformAuthSupported.value = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
 
 	await updateData();
@@ -248,7 +249,7 @@ onMounted(async () => {
 	if ($route.query.sessionId) {
 		mode.value = 'connect';
 		$mitt.emit('modal::open', { id: 'account_connect' });
-	} else if ($user.vaults.length) {
+	} else if ($userPQ.myLocalUsers?.length) {
 		mode.value = 'existing';
 	}
 
@@ -259,6 +260,8 @@ onUnmounted(async () => {
 	$mitt.off('account::created', updateData);
 });
 
+// TODO: PHASE 4 - Delete this function after PQ migration
+// Web3 feature - not needed in PQ architecture
 const updateData = async () => {
 	$user.vaults = await $encryptionManager.getVaults();
 };
@@ -282,11 +285,12 @@ const connectVaultLocalApp = async () => {
 	let currentUser = vaults.find((u) => u.current);
 	if (!currentUser) currentUser = vaults[0];
 
-	await $encryptionManager.connectToChatVault(currentUser.vaultId);
+	await $encryptionManager.connectToVault(currentUser.vaultId);
 
 	if (!$encryptionManager.isAuth) return;
 
-	const vault = await $encryptionManager.getChatData();
+	const vault = await $encryptionManager.getData();
+
 	const privateKeyB64 = $enigma.stringToBase64($enigma.hexToUint8Array(vault.privateKey.slice(2)));
 	const publicKeyB64 = $enigma.stringToBase64($enigma.getPublicKeyFromPrivateKey(vault.privateKey.slice(2)));
 

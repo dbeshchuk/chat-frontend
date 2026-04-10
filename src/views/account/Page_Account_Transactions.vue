@@ -1,6 +1,8 @@
 <template>
-	<FullContentBlock v-if="$user.account">
-		<template #header><div class="fw-bold fs-5 py-1">Transactions</div> </template>
+	<FullContentBlock v-if="$userPQ.currentUser">
+		<template #header>
+			<div class="fw-bold fs-5 py-1">Transactions</div>
+		</template>
 		<template #content>
 			<div class="_full_width_block">
 				<Offline_Reminder />
@@ -27,6 +29,7 @@
 
 <style lang="scss" scoped>
 @import '@/scss/variables.scss';
+
 ._full_width_block {
 	max-width: 40rem;
 	width: 100%;
@@ -41,6 +44,8 @@ import { ref, onMounted, watch, inject, computed, onUnmounted } from 'vue';
 import axios from 'axios';
 
 const $user = inject('$user');
+const $userPQ = inject('$userPQ');
+
 const $mitt = inject('$mitt');
 const $web3 = inject('$web3');
 const $socket = inject('$socket');

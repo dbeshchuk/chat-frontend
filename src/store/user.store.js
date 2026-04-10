@@ -1,7 +1,11 @@
+// TODO: PHASE 4 - DELETE THIS FILE after PQ migration complete
+// This is the Web3/Ethereum-based store being replaced by userPQ.store.js
+// Keep commented code for reference during migration
+
 import { defineStore } from 'pinia';
 import * as $enigma from '../libs/enigma';
 import { Wallet } from 'ethers';
-import { web3Store } from './web3.store';
+import { web3Store } from './web3.store'; // TODO: PHASE 4 - web3Store also deleted
 import { ref, watch, reactive, computed } from 'vue';
 import { clearLockKeyCache } from '@lo-fi/local-data-lock';
 import $swal from '../libs/swal';

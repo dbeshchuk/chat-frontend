@@ -1,5 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import { userStore } from '@/store/user.store';
+// TODO: REFACTOR - Remove direct import of store; use Pinia instance from app instead
+// @see https://pinia.vuejs.org/core-concepts/plugin.html#accessing-the-store-outside-of-a-component
+import { userPQStore } from '@/store/userPQ.store';
+// import { storeToRefs } from 'pinia';
 
 const routes = [
 	{
@@ -122,16 +125,25 @@ const router = createRouter({
 });
 
 router.beforeEach(async (to, from, next) => {
-	const $user = userStore();
+	// TODO: REFACTOR - This creates a NEW store instance every navigation
+	// FIX: Pass Pinia instance from app OR use inject from app context
+	// Current workaround: router uses Pinia directly (but need to pass pinia instance)
+	//const { useUserPQStore } = await import('@/store/userPQ.store');
+	const $userPQ = userPQStore();
+
+	// Ensure store is initialized before checking auth
+	if (!$userPQ.isInitialized) {
+		await $userPQ.initialize();
+	}
 
 	if (to.meta.auth) {
-		if ($user.account) {
+		if ($userPQ.currentUser) {
 			next();
 		} else {
 			next({ name: 'login' });
 		}
 	} else {
-		if (!$user.account) {
+		if (!$userPQ.currentUser) {
 			next();
 		} else {
 			next({ name: 'account_info' });
