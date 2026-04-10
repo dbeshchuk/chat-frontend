@@ -5,6 +5,6 @@
 
 [[redirects]]
   from = "/api/*"
-  to = "http://buckitup.xyz:4403/:splat"
+  to = "https://buckitup.xyz/electric/v1"
   status = 200
   force = true
