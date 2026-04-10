@@ -6,26 +6,32 @@ CREATE TABLE IF NOT EXISTS user_cards_synced (
     user_hash      TEXT PRIMARY KEY,
 
     sign_pkey      TEXT,
-    crypt_pkey     TEXT,
-    crypt_cert     TEXT,
-    contact_pkey   TEXT,
-    contact_cert   TEXT,
+    crypt_pkey    TEXT,
+    crypt_cert    TEXT,
+    contact_pkey TEXT,
+    contact_cert TEXT,
 
     name           TEXT NOT NULL DEFAULT '',
+    deleted_flag BOOLEAN DEFAULT FALSE,
+    owner_timestamp BIGINT DEFAULT (EXTRACT(EPOCH FROM NOW())::BIGINT * 1000)::BIGINT,
+    sign_b64      TEXT,
 
     created_at     TIMESTAMPTZ DEFAULT NOW(),
-    updated_at     TIMESTAMPTZ DEFAULT NOW()
+    updated_at    TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS user_cards_local (
     user_hash      TEXT PRIMARY KEY,
 
     sign_pkey      TEXT,
-    crypt_pkey     TEXT,
-    crypt_cert     TEXT,
-    contact_pkey   TEXT,
-    contact_cert   TEXT,
+    crypt_pkey    TEXT,
+    crypt_cert    TEXT,
+    contact_pkey TEXT,
+    contact_cert TEXT,
     name           TEXT,
+    deleted_flag BOOLEAN DEFAULT FALSE,
+    owner_timestamp BIGINT,
+    sign_b64      TEXT,
 
     operation      TEXT NOT NULL CHECK (operation IN ('insert', 'update', 'delete')),
     changed_at     TIMESTAMPTZ DEFAULT NOW()

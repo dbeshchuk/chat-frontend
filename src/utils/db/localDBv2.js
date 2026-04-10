@@ -35,6 +35,9 @@ class LocalDBv2 {
 
       await this.db.exec(schemaSQL);
 
+      // Skip migrations - columns should now exist from previous runs
+      // Schema already has new columns in CREATE TABLE
+
       await this.initSyncEngine();
 
       const pending = await this.getPendingChanges();
@@ -58,28 +61,33 @@ class LocalDBv2 {
   }
 
   async initSyncEngine() {
-    const { setOffline } = useOnlineStatus();
+    // Skip if already syncing
+    if (this.syncEngine) return;
 
-    fetch('http://localhost:4444/electric/v1/user_card?offset=-1').then(response => {
-      console.log('response', response.body)
-    })
-
-    this.syncEngine = await this.db.electric.syncShapeToTable({
-      shape: {
-        url: new URL(`/api/user_card`, window.location.origin).toString(),
-        params: {
-          table: "user_cards",
+    try {
+      const { setOffline } = useOnlineStatus();
+      this.syncEngine = await this.db.electric.syncShapeToTable({
+        shape: {
+          url: new URL(`/api/user_card`, window.location.origin).toString(),
+          params: {
+            table: "user_cards",
+          },
         },
-      },
-      table: "user_cards_synced",
-      primaryKey: ["user_hash"],
-      shapeKey: "user_cards_public",
-      onError: (error) => {
-        console.error("Shape sync error:", error);
-
-        setOffline();
-      },
-    });
+        table: "user_cards_synced",
+        primaryKey: ["user_hash"],
+        shapeKey: "user_cards_public",
+        onError: (error) => {
+          console.error("Shape sync error:", error);
+          setOffline();
+        },
+      });
+    } catch (e) {
+      if (e.message.includes('Already syncing')) {
+        console.log('Shape sync already running');
+      } else {
+        throw e;
+      }
+    }
   }
 
   async getUsers() {
@@ -124,21 +132,26 @@ class LocalDBv2 {
       ON CONFLICT (user_hash) DO UPDATE SET
         sign_pkey     = EXCLUDED.sign_pkey,
         crypt_pkey    = EXCLUDED.crypt_pkey,
-        crypt_cert    = EXCLUDED.crypt_cert,
-        contact_pkey  = EXCLUDED.contact_pkey,
-        contact_cert  = EXCLUDED.contact_cert,
-        name          = EXCLUDED.name,
-        operation     = 'update',
-        changed_at    = NOW()
+        crypt_cert   = EXCLUDED.crypt_cert,
+        contact_pkey = EXCLUDED.contact_pkey,
+        contact_cert = EXCLUDED.contact_cert,
+        name       = EXCLUDED.name,
+        operation  = 'update',
+        changed_at = NOW()
       `,
       [user_hash, sign_pkey, crypt_pkey, crypt_cert, contact_pkey, contact_cert, name || ""]
     );
 
     this.isLocalStash = true;
-    await this.sendPendingChanges();
+    await this.sendPendingChanges({
+      ...userData,
+      deleted_flag: userData.deleted_flag ?? false,
+      owner_timestamp: userData.owner_timestamp ?? Date.now(),
+      sign_b64: userData.sign_b64 ?? null
+    });
   }
 
-  async markUserAsDeletedLocal(userHash) {
+  async markUserAsDeletedLocal(userHash, sign_b64) {
     await this.db.query(
       `
       INSERT INTO user_cards_local (user_hash, operation)
@@ -152,10 +165,10 @@ class LocalDBv2 {
 
     this.isLocalStash = true;
 
-    await this.sendPendingChanges();
+    await this.sendPendingChanges({ user_hash: userHash, deleted_flag: true, owner_timestamp: Date.now(), sign_b64 });
   }
 
-  async sendPendingChanges() {
+  async sendPendingChanges(extraData = {}) {
     if (!navigator.onLine || !this.isLocalStash) return;
 
     const changes = await this.getPendingChanges();
@@ -184,6 +197,9 @@ class LocalDBv2 {
           contact_pkey: row.contact_pkey,
           contact_cert: row.contact_cert,
           name: row.name,
+          deleted_flag: row.deleted_flag || extraData.deleted_flag || false,
+          owner_timestamp: row.owner_timestamp || extraData.owner_timestamp || Date.now(),
+          sign_b64: row.sign_b64 || extraData.sign_b64,
         },
         syncMetadata: { relation: "user_cards" },
       };

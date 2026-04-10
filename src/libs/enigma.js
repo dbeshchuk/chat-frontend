@@ -337,7 +337,7 @@ export const base64ToString = (base64Data) => {
  */
 export const base64ToArray = (base64Data) => {
 	const buffer = Buffer.from(base64Data, 'base64');
-	return new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+	return new Uint8Array(buffer);
 };
 /**
  * Converts a Uint8Array to a base64 string.
@@ -345,7 +345,8 @@ export const base64ToArray = (base64Data) => {
  * @returns {string} - Data in base64 format.
  */
 export const arrayToBase64 = (array) => {
-	return Buffer.from(array).toString('base64');
+	const uint8 = array instanceof Uint8Array ? array : new Uint8Array(array);
+	return Buffer.from(uint8).toString('base64');
 };
 /**
  * Converts a string to a base64 string.

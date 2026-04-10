@@ -32,6 +32,8 @@ export const userPQStore = defineStore('userPQ', () => {
     em.value = EncryptionManagerPQ.getInstance();
     await em.value.initialize();
 
+    await localDB.init();
+
     myLocalUsers.value = await em.value.getLocalUserCards();
 
     isInitialized.value = true;

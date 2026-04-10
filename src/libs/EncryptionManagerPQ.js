@@ -1,11 +1,14 @@
 import { connect, rawStorage } from '@lo-fi/local-vault';
 import '@lo-fi/local-vault/adapter/idb';
 import { removeLocalAccount } from '@lo-fi/local-data-lock';
+import * as secp from '@noble/secp256k1';
 import { ml_dsa87 } from '@noble/post-quantum/ml-dsa.js';
+import { ml_kem1024 } from '@noble/post-quantum/ml-kem.js';
 import { sha3_512 } from '@noble/hashes/sha3';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
 import { randomBytes } from '@noble/post-quantum/utils.js';
-// import { localDB } from '../utils/db/localDBv2';
+import { localDB } from '../utils/db/localDBv2';
+import { signDigest, base64ToArray, arrayToBase64 } from './enigma';
 
 const VAULT_KEY_OPTIONS = {
   authenticatorSelection: {
@@ -87,19 +90,37 @@ export class EncryptionManagerPQ extends EventTarget {
 
     const seed = randomBytes(32);
 
-    const { publicKey, secretKey } = ml_dsa87.keygen(seed);
+    const { publicKey: signPubKey, secretKey: signSkey } = ml_dsa87.keygen(seed);
 
-    const prefixed = new Uint8Array([1, ...publicKey]);
+    const { publicKey: cryptPubKey } = ml_kem1024.keygen();
 
+    const contactPrivKey = secp.utils.randomPrivateKey();
+    const contactPubKey = secp.getPublicKey(contactPrivKey, true);
+
+    const prefixed = new Uint8Array([1, ...signPubKey]);
     const userHash = bytesToHex(sha3_512(prefixed));
 
-    await userVault.set(`sign_skey`, secretKey);
+    const cryptPubKeyB64 = arrayToBase64(cryptPubKey);
+
+    const contactPrivKeyB64 = arrayToBase64(new Uint8Array(contactPrivKey));
+    const cryptCert = await signDigest(cryptPubKeyB64, contactPrivKeyB64);
+
+    const contactPubKeyB64 = arrayToBase64(new Uint8Array(contactPubKey));
+    const contactCert = await signDigest(contactPubKeyB64, contactPrivKeyB64);
+    const sign_b64 = await signDigest(contactPubKeyB64, contactPrivKeyB64);
+
+    await userVault.set(`sign_skey`, signSkey);
 
     const identity = {
       user_hash: userHash,
       vaultId: userVault.id,
       name,
-      sign_pkey: bytesToHex(publicKey),
+      sign_pkey: bytesToHex(signPubKey),
+      crypt_pkey: cryptPubKeyB64,
+      crypt_cert: cryptCert,
+      contact_pkey: contactPubKeyB64,
+      contact_cert: contactCert,
+      sign_b64: sign_b64,
 
       userStorage: {
         avatar,
@@ -111,15 +132,18 @@ export class EncryptionManagerPQ extends EventTarget {
 
     await this.#saveLocalUserCards();
 
-    // await localDB.upsertUserLocal({
-    //   user_hash: userHash,
-    //   name,
-    //   sign_pkey: bytesToHex(publicKey),
-    //   crypt_pkey: null,
-    //   crypt_cert: null,
-    //   contact_pkey: null,
-    //   contact_cert: null
-    // });
+    await localDB.upsertUserLocal({
+      user_hash: userHash,
+      sign_pkey: identity.sign_pkey,
+      crypt_pkey: identity.crypt_pkey,
+      crypt_cert: identity.crypt_cert,
+      contact_pkey: identity.contact_pkey,
+      contact_cert: identity.contact_cert,
+      name,
+      deleted_flag: false,
+      owner_timestamp: Date.now(),
+      sign_b64
+    });
 
     await this.login(userHash);
 
