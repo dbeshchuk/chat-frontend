@@ -8,7 +8,7 @@ import { sha3_512 } from '@noble/hashes/sha3';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
 import { randomBytes } from '@noble/post-quantum/utils.js';
 import { localDB } from '../utils/db/localDBv2';
-import { signDigest, base64ToArray, arrayToBase64 } from './enigma';
+import { arrayToBase64 } from './enigma';
 
 const VAULT_KEY_OPTIONS = {
   authenticatorSelection: {
@@ -48,6 +48,7 @@ export class EncryptionManagerPQ extends EventTarget {
 
     EncryptionManagerPQ.instance = this;
 
+    localDB.setAuthProvider(() => this.#signSkey);
     this.#loadLocalUserCards()
   }
 
@@ -97,17 +98,13 @@ export class EncryptionManagerPQ extends EventTarget {
     const contactPrivKey = secp.utils.randomPrivateKey();
     const contactPubKey = secp.getPublicKey(contactPrivKey, true);
 
-    const prefixed = new Uint8Array([1, ...signPubKey]);
-    const userHash = bytesToHex(sha3_512(prefixed));
+    const userHash = 'u_' + bytesToHex(sha3_512(signPubKey));
 
     const cryptPubKeyB64 = arrayToBase64(cryptPubKey);
-
-    const contactPrivKeyB64 = arrayToBase64(new Uint8Array(contactPrivKey));
-    const cryptCert = await signDigest(cryptPubKeyB64, contactPrivKeyB64);
+    const cryptCert = arrayToBase64(ml_dsa87.sign(cryptPubKey, signSkey));
 
     const contactPubKeyB64 = arrayToBase64(new Uint8Array(contactPubKey));
-    const contactCert = await signDigest(contactPubKeyB64, contactPrivKeyB64);
-    const sign_b64 = await signDigest(contactPubKeyB64, contactPrivKeyB64);
+    const contactCert = arrayToBase64(ml_dsa87.sign(contactPubKey, signSkey));
 
     await userVault.set(`sign_skey`, signSkey);
 
@@ -115,12 +112,11 @@ export class EncryptionManagerPQ extends EventTarget {
       user_hash: userHash,
       vaultId: userVault.id,
       name,
-      sign_pkey: bytesToHex(signPubKey),
+      sign_pkey: arrayToBase64(signPubKey),
       crypt_pkey: cryptPubKeyB64,
       crypt_cert: cryptCert,
       contact_pkey: contactPubKeyB64,
       contact_cert: contactCert,
-      sign_b64: sign_b64,
 
       userStorage: {
         avatar,
@@ -142,7 +138,6 @@ export class EncryptionManagerPQ extends EventTarget {
       name,
       deleted_flag: false,
       owner_timestamp: Date.now(),
-      sign_b64
     });
 
     await this.login(userHash);

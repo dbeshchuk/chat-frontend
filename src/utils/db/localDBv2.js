@@ -6,11 +6,17 @@ import { api } from "../../api/client";
 import { useOnlineStatus } from "../../composables/useOnlineStatus";
 
 class LocalDBv2 {
+  #getSignSkey = null;
+
   constructor() {
     this.isOnline = navigator.onLine;
     this.isLocalStash = false;
     this.db = null;
     this.syncEngine = null;
+  }
+
+  setAuthProvider(getSignSkey) {
+    this.#getSignSkey = getSignSkey;
   }
 
   get instance() {
@@ -48,7 +54,11 @@ class LocalDBv2 {
         console.debug("user_cards_synced shape updated");
 
         if (this.isLocalStash) {
-          setTimeout(() => this.sendPendingChanges(), 1200);
+          setTimeout(() => {
+            if (this.#getSignSkey) {
+              this.sendPendingChanges(this.#getSignSkey());
+            }
+          }, 1200);
         }
       });
 
@@ -128,7 +138,7 @@ class LocalDBv2 {
         user_hash, sign_pkey, crypt_pkey, crypt_cert,
         contact_pkey, contact_cert, name, operation
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, 'update')
+      VALUES ($1, $2, $3, $4, $5, $6, $7, 'insert')
       ON CONFLICT (user_hash) DO UPDATE SET
         sign_pkey     = EXCLUDED.sign_pkey,
         crypt_pkey    = EXCLUDED.crypt_pkey,
@@ -143,75 +153,90 @@ class LocalDBv2 {
     );
 
     this.isLocalStash = true;
-    await this.sendPendingChanges({
-      ...userData,
-      deleted_flag: userData.deleted_flag ?? false,
-      owner_timestamp: userData.owner_timestamp ?? Date.now(),
-      sign_b64: userData.sign_b64 ?? null
-    });
   }
 
-  async markUserAsDeletedLocal(userHash, sign_b64) {
+  async markUserAsDeletedLocal(userHash) {
     await this.db.query(
       `
       INSERT INTO user_cards_local (user_hash, operation)
       VALUES ($1, 'delete')
       ON CONFLICT (user_hash) DO UPDATE SET
-        operation  = 'delete',
-        changed_at = NOW()
+        operation   = 'delete',
+        changed_at  = NOW()
       `,
       [userHash]
     );
 
     this.isLocalStash = true;
-
-    await this.sendPendingChanges({ user_hash: userHash, deleted_flag: true, owner_timestamp: Date.now(), sign_b64 });
   }
 
-  async sendPendingChanges(extraData = {}) {
+  async sendPendingChanges(signSkey) {
     if (!navigator.onLine || !this.isLocalStash) return;
+
+    if (!signSkey) {
+      console.warn('sign_skey required for sending pending changes');
+      return;
+    }
 
     const changes = await this.getPendingChanges();
     if (changes.length === 0) {
       this.isLocalStash = false;
-
       return;
     }
 
-    const payloads = changes.map((row) => {
-      if (row.operation === "delete") {
-        return {
-          type: "delete",
-          key: { user_hash: row.user_hash },
-          syncMetadata: { relation: "user_cards" },
-        };
+    const mutations = changes.map((row) => {
+      if (row.operation === "insert") {
+        const { mutation } = api.createUserCard(row.name, {
+          user_hash: row.user_hash,
+          sign_pkey: this.#base64ToArray(row.sign_pkey),
+          contact_pkey: this.#base64ToArray(row.contact_pkey),
+          contact_cert: this.#base64ToArray(row.contact_cert),
+          crypt_pkey: this.#base64ToArray(row.crypt_pkey),
+          crypt_cert: this.#base64ToArray(row.crypt_cert),
+          sign_skey: signSkey,
+        });
+        return mutation;
       }
 
-      return {
-        type: row.operation === "insert" ? "insert" : "update",
-        modified: {
+      if (row.operation === "update") {
+        const ownerTimestamp = Math.floor(Date.now() / 1000);
+        const { mutation } = api.createUserCard(row.name, {
           user_hash: row.user_hash,
-          sign_pkey: row.sign_pkey,
-          crypt_pkey: row.crypt_pkey,
-          crypt_cert: row.crypt_cert,
-          contact_pkey: row.contact_pkey,
-          contact_cert: row.contact_cert,
-          name: row.name,
-          deleted_flag: row.deleted_flag || extraData.deleted_flag || false,
-          owner_timestamp: row.owner_timestamp || extraData.owner_timestamp || Date.now(),
-          sign_b64: row.sign_b64 || extraData.sign_b64,
-        },
-        syncMetadata: { relation: "user_cards" },
-      };
-    });
+          sign_pkey: this.#base64ToArray(row.sign_pkey),
+          contact_pkey: this.#base64ToArray(row.contact_pkey),
+          contact_cert: this.#base64ToArray(row.contact_cert),
+          crypt_pkey: this.#base64ToArray(row.crypt_pkey),
+          crypt_cert: this.#base64ToArray(row.crypt_cert),
+          sign_skey: signSkey,
+        });
+        mutation.type = "update";
+        return mutation;
+      }
+
+      return null;
+    }).filter(Boolean);
 
     try {
-      await api.ingest(payloads);
+      const resp = await api.ingestWithAuth(mutations, signSkey);
+      const responseText = await resp.text();
+      console.log('>>> Mutations sent:', JSON.stringify(mutations, null, 2));
+      console.log('>>> Ingest response status:', resp.status);
+      console.log('>>> Ingest response body:', responseText);
+      if (!resp.ok) {
+        console.warn('Ingest failed:', resp.status, responseText);
+        return;
+      }
 
-      console.log(`→ Sent ${payloads.length} local user changes`);
+      console.log(`→ Sent ${changes.length} local user changes`);
     } catch (err) {
       console.warn("→ Sync of local users failed, will retry later", err);
     }
+  }
+
+  #base64ToArray(base64) {
+    if (!base64) return null;
+    const binary = atob(base64);
+    return Uint8Array.from(binary, c => c.charCodeAt(0));
   }
 
   async debugLocalState() {
